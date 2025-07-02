@@ -21,6 +21,7 @@ struct QuizView: View {
     @State private var showFeedbackOverlay = false
     @State private var feedbackColor: Color = .clear
     @State private var feedbackIcon: String = ""
+    @AppStorage("primaryLanguage") private var primaryLanguage: String = "en"
     
     var currentWord: WordEntry? {
         guard currentWordIndex < wordsDueForReview.count else { return nil }
@@ -123,7 +124,8 @@ struct QuizView: View {
         // Feedback overlay
         feedbackColor = isAnswerCorrect ? .green : .red
         feedbackIcon = isAnswerCorrect ? "checkmark.circle.fill" : "xmark.circle.fill"
-        showFeedbackOverlay = true
+        // Only show overlay for correct answers
+        showFeedbackOverlay = isAnswerCorrect
         // Haptic feedback
         let generator = UINotificationFeedbackGenerator()
         if isAnswerCorrect {
@@ -131,17 +133,34 @@ struct QuizView: View {
         } else {
             generator.notificationOccurred(.error)
         }
-        // Hide overlay after short delay, then proceed
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
-            withAnimation {
-                showFeedbackOverlay = false
+        // Show correct answer if wrong, then proceed
+        if !isAnswerCorrect {
+            showingAnswer = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                withAnimation {
+                    showFeedbackOverlay = false
+                }
+                showingResult = false
+                showingAnswer = false
+                userAnswer = ""
+                currentWordIndex += 1
+                if currentWordIndex >= wordsDueForReview.count {
+                    quizCompleted = true
+                }
             }
-            showingResult = false
-            showingAnswer = false
-            userAnswer = ""
-            currentWordIndex += 1
-            if currentWordIndex >= wordsDueForReview.count {
-                quizCompleted = true
+        } else {
+            // Hide overlay after short delay, then proceed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                withAnimation {
+                    showFeedbackOverlay = false
+                }
+                showingResult = false
+                showingAnswer = false
+                userAnswer = ""
+                currentWordIndex += 1
+                if currentWordIndex >= wordsDueForReview.count {
+                    quizCompleted = true
+                }
             }
         }
     }
@@ -166,6 +185,7 @@ struct QuizQuestionCardView: View {
     @Binding var userAnswer: String
     @Binding var isCorrect: Bool
     let onAnswerSubmitted: () -> Void
+    @AppStorage("primaryLanguage") private var primaryLanguage: String = "en"
     
     var body: some View {
         VStack(spacing: 0) {
@@ -196,7 +216,7 @@ struct QuizQuestionCardView: View {
                     Text("Translate this word:")
                         .font(.headline)
                         .foregroundColor(.secondary)
-                    Text(word.word ?? "")
+                    Text(nonPrimaryWord)
                         .font(.system(size: 36, weight: .bold))
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
@@ -229,7 +249,7 @@ struct QuizQuestionCardView: View {
                         HStack(spacing: 8) {
                             Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
                                 .foregroundColor(isCorrect ? .green : .red)
-                            Text(isCorrect ? "Correct!" : "Correct answer: \(word.translation ?? "")")
+                            Text(isCorrect ? "Correct!" : "Correct answer: \(primaryWord)")
                                 .foregroundColor(isCorrect ? .green : .red)
                                 .fontWeight(.semibold)
                         }
@@ -260,6 +280,24 @@ struct QuizQuestionCardView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
+    }
+    
+    private var nonPrimaryWord: String {
+        // If the word's language is the primary language, show the translation (non-primary)
+        if word.language == primaryLanguage {
+            return word.translation ?? ""
+        } else {
+            return word.word ?? ""
+        }
+    }
+    
+    private var primaryWord: String {
+        // If the word's language is the primary language, the word itself is the primary
+        if word.language == primaryLanguage {
+            return word.word ?? ""
+        } else {
+            return word.translation ?? ""
+        }
     }
 }
 
