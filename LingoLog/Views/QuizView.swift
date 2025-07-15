@@ -5,6 +5,7 @@ import UIKit
 struct QuizView: View {
     @ObservedObject var dataManager = DataManager.shared
     @Environment(\.dismiss) private var dismiss
+    @State private var isModal: Bool = false
     
     // Logo-inspired gradient
     private let logoGradient = LinearGradient(
@@ -72,12 +73,24 @@ struct QuizView: View {
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Close") { dismiss() }
-                            .foregroundStyle(logoGradient)
+                    // Only show Close button if presented modally
+                    if isModal {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Close") { dismiss() }
+                                .foregroundStyle(logoGradient)
+                        }
                     }
                 }
-                .onAppear { loadWordsForQuiz() }
+                .onAppear {
+                    loadWordsForQuiz()
+                    // Detect if presented modally (sheet or fullScreenCover)
+                    if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let root = scene.windows.first?.rootViewController {
+                        var vc = root.presentedViewController
+                        while let presented = vc?.presentedViewController { vc = presented }
+                        isModal = vc != nil
+                    }
+                }
             }
             .navigationViewStyle(.stack)
             .edgesIgnoringSafeArea(.all)
