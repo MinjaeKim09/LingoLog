@@ -6,6 +6,13 @@ struct QuizView: View {
     @ObservedObject var dataManager = DataManager.shared
     @Environment(\.dismiss) private var dismiss
     
+    // Logo-inspired gradient
+    private let logoGradient = LinearGradient(
+        colors: [Color.cyan, Color.blue, Color.purple],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
     @State private var wordsDueForReview: [WordEntry] = []
     @State private var currentWordIndex = 0
     @State private var showingAnswer = false
@@ -21,7 +28,6 @@ struct QuizView: View {
     @State private var showFeedbackOverlay = false
     @State private var feedbackColor: Color = .clear
     @State private var feedbackIcon: String = ""
-    @AppStorage("primaryLanguage") private var primaryLanguage: String = "en"
     
     var currentWord: WordEntry? {
         guard currentWordIndex < wordsDueForReview.count else { return nil }
@@ -30,7 +36,7 @@ struct QuizView: View {
     
     var body: some View {
         ZStack {
-            Color(.systemBackground)
+            Color(.systemGray6)
                 .ignoresSafeArea()
             NavigationView {
                 ZStack {
@@ -40,7 +46,8 @@ struct QuizView: View {
                             totalQuestions: totalQuestions,
                             onDismiss: { dismiss() },
                             onRetake: retakeQuiz,
-                            noWordsToRetake: noWordsToRetake
+                            noWordsToRetake: noWordsToRetake,
+                            gradient: logoGradient
                         )
                         .transition(.opacity)
                     } else if let word = currentWord {
@@ -51,13 +58,14 @@ struct QuizView: View {
                             showingAnswer: $showingAnswer,
                             userAnswer: $userAnswer,
                             isCorrect: $isCorrect,
-                            onAnswerSubmitted: { handleAnswerWithFeedback() }
+                            onAnswerSubmitted: { handleAnswerWithFeedback() },
+                            gradient: logoGradient
                         )
                         .matchedGeometryEffect(id: "card", in: animation)
                         .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                         .animation(.easeInOut, value: currentWordIndex)
                     } else {
-                        NoWordsView()
+                        NoWordsView(gradient: logoGradient)
                             .transition(.opacity)
                     }
                 }
@@ -66,6 +74,7 @@ struct QuizView: View {
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button("Close") { dismiss() }
+                            .foregroundStyle(logoGradient)
                     }
                 }
                 .onAppear { loadWordsForQuiz() }
@@ -85,7 +94,7 @@ struct QuizView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 120, height: 120)
-                        .foregroundColor(.white)
+                        .foregroundStyle(logoGradient)
                         .shadow(radius: 10)
                         .scaleEffect(showFeedbackOverlay ? 1.0 : 0.5)
                         .opacity(showFeedbackOverlay ? 1.0 : 0.0)
@@ -185,7 +194,7 @@ struct QuizQuestionCardView: View {
     @Binding var userAnswer: String
     @Binding var isCorrect: Bool
     let onAnswerSubmitted: () -> Void
-    @AppStorage("primaryLanguage") private var primaryLanguage: String = "en"
+    let gradient: LinearGradient
     
     var body: some View {
         VStack(spacing: 0) {
@@ -216,7 +225,7 @@ struct QuizQuestionCardView: View {
                     Text("Translate this word:")
                         .font(.headline)
                         .foregroundColor(.secondary)
-                    Text(nonPrimaryWord)
+                    Text(word.word ?? "")
                         .font(.system(size: 36, weight: .bold))
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
@@ -227,6 +236,9 @@ struct QuizQuestionCardView: View {
                             .italic()
                             .multilineTextAlignment(.center)
                     }
+                    Text("Language: \(word.language ?? "")")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
                 .padding(.top, 16)
                 // Answer
@@ -249,7 +261,7 @@ struct QuizQuestionCardView: View {
                         HStack(spacing: 8) {
                             Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
                                 .foregroundColor(isCorrect ? .green : .red)
-                            Text(isCorrect ? "Correct!" : "Correct answer: \(primaryWord)")
+                            Text(isCorrect ? "Correct!" : "Correct answer: \(word.translation ?? "")")
                                 .foregroundColor(isCorrect ? .green : .red)
                                 .fontWeight(.semibold)
                         }
@@ -281,24 +293,6 @@ struct QuizQuestionCardView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
     }
-    
-    private var nonPrimaryWord: String {
-        // If the word's language is the primary language, show the translation (non-primary)
-        if word.language == primaryLanguage {
-            return word.translation ?? ""
-        } else {
-            return word.word ?? ""
-        }
-    }
-    
-    private var primaryWord: String {
-        // If the word's language is the primary language, the word itself is the primary
-        if word.language == primaryLanguage {
-            return word.word ?? ""
-        } else {
-            return word.translation ?? ""
-        }
-    }
 }
 
 struct QuizResultView: View {
@@ -307,6 +301,7 @@ struct QuizResultView: View {
     let onDismiss: () -> Void
     let onRetake: () -> Void
     let noWordsToRetake: Bool
+    let gradient: LinearGradient
     
     private var percentage: Double {
         guard totalQuestions > 0 else { return 0 }
@@ -380,6 +375,8 @@ struct QuizResultView: View {
 }
 
 struct NoWordsView: View {
+    let gradient: LinearGradient
+    
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "checkmark.circle.fill")

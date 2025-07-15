@@ -5,6 +5,13 @@ struct AddWordView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var dataManager = DataManager.shared
     
+    // Logo-inspired gradient
+    private let logoGradient = LinearGradient(
+        colors: [Color.cyan, Color.blue, Color.purple],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
     @State private var inputText = ""
     @State private var detectedLanguageCode: String? = nil
     @State private var translation: String? = nil
@@ -32,10 +39,13 @@ struct AddWordView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Word or Phrase")) {
+                Section(header: Text("Word or Phrase").foregroundStyle(logoGradient)) {
                     TextField("Type or paste here", text: $inputText)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
+                        .padding(8)
+                        .background(Color(.systemGray5))
+                        .cornerRadius(10)
                         .onChange(of: inputText) { newValue in
                             debounceCancellable?.cancel()
                             debounceCancellable = Just(newValue)
@@ -46,7 +56,7 @@ struct AddWordView: View {
                         }
                 }
                 
-                Section(header: Text("Translate To")) {
+                Section(header: Text("Translate To").foregroundStyle(logoGradient)) {
                     Picker("Language", selection: $targetLanguage) {
                         ForEach(languageOptions, id: \.code) { lang in
                             Text(lang.name).tag(lang.code)
@@ -66,7 +76,7 @@ struct AddWordView: View {
                 }
                 
                 if let translated = translation, !translated.isEmpty {
-                    Section(header: Text("Translation Result")) {
+                    Section(header: Text("Translation Result").foregroundStyle(logoGradient)) {
                         VStack(alignment: .leading, spacing: 8) {
                             if let detected = detectedLanguageCode {
                                 HStack {
@@ -82,15 +92,18 @@ struct AddWordView: View {
                                 Spacer()
                                 Text(translated)
                                     .font(.headline)
-                                    .foregroundColor(.accentColor)
+                                    .foregroundStyle(logoGradient)
                             }
                         }
                     }
                 }
                 
-                Section(header: Text("Context (Optional)")) {
+                Section(header: Text("Context (Optional)").foregroundStyle(logoGradient)) {
                     TextField("Where did you see this? (e.g., K-drama, menu)", text: $context)
                         .autocapitalization(.sentences)
+                        .padding(8)
+                        .background(Color(.systemGray5))
+                        .cornerRadius(10)
                 }
                 
                 if let error = errorMessage {
@@ -100,11 +113,13 @@ struct AddWordView: View {
                     }
                 }
             }
+            .background(Color(.systemGray6))
             .navigationTitle("Add New Word")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { dismiss() }
+                        .foregroundStyle(logoGradient)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -113,6 +128,7 @@ struct AddWordView: View {
                         }
                     } label: {
                         Text("Save")
+                            .foregroundStyle(logoGradient)
                     }
                     .disabled(translation == nil || translation?.isEmpty == true)
                 }

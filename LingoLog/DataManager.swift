@@ -31,10 +31,17 @@ class DataManager: ObservableObject {
         
         container.viewContext.automaticallyMergesChangesFromParent = true
         // Load notification time from UserDefaults or default to 9:00
-        let hour = UserDefaults.standard.integer(forKey: notificationHourKey)
-        let minute = UserDefaults.standard.integer(forKey: notificationMinuteKey)
-        self.notificationHour = hour == 0 ? 9 : hour
-        self.notificationMinute = minute
+        if UserDefaults.standard.object(forKey: notificationHourKey) != nil {
+            self.notificationHour = UserDefaults.standard.integer(forKey: notificationHourKey)
+        } else {
+            self.notificationHour = 9 // Default to 9 AM
+        }
+        
+        if UserDefaults.standard.object(forKey: notificationMinuteKey) != nil {
+            self.notificationMinute = UserDefaults.standard.integer(forKey: notificationMinuteKey)
+        } else {
+            self.notificationMinute = 0 // Default to 0 minutes
+        }
     }
     
     private func saveNotificationTime() {
