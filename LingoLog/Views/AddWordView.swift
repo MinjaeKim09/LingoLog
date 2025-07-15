@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import Translation
 
 struct AddWordView: View {
     @Environment(\.dismiss) private var dismiss
@@ -13,14 +14,17 @@ struct AddWordView: View {
     )
     
     @State private var inputText = ""
-    @State private var detectedLanguageCode: String? = nil
+    @AppStorage("lastUsedSourceLanguage") private var sourceLanguage = "en" // Default to English
     @State private var translation: String? = nil
-    @State private var targetLanguage = "en" // Default to English
+    @AppStorage("lastUsedTargetLanguage") private var targetLanguage = "en" // Default to English
     @State private var context = ""
     @State private var isTranslating = false
     @State private var errorMessage: String? = nil
     @State private var debounceCancellable: AnyCancellable? = nil
     @State private var didPrewarmNetwork = false
+    @State private var translationConfiguration: TranslationSession.Configuration?
+    @State private var textToTranslate: String = ""
+    @State private var translationTrigger: UUID = UUID()
     
     private let languageOptions = [
         (code: "en", name: "English"),
@@ -43,9 +47,6 @@ struct AddWordView: View {
                     TextField("Type or paste here", text: $inputText)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                        .padding(8)
-                        .background(Color(.systemGray5))
-                        .cornerRadius(10)
                         .onChange(of: inputText) { newValue in
                             debounceCancellable?.cancel()
                             debounceCancellable = Just(newValue)
@@ -54,6 +55,15 @@ struct AddWordView: View {
                                     translate(text: value)
                                 }
                         }
+                }
+                
+                Section(header: Text("Translate From").foregroundStyle(logoGradient)) {
+                    Picker("Source Language", selection: $sourceLanguage) {
+                        ForEach(languageOptions, id: \.code) { lang in
+                            Text(lang.name).tag(lang.code)
+                        }
+                    }
+                    .pickerStyle(.navigationLink)
                 }
                 
                 Section(header: Text("Translate To").foregroundStyle(logoGradient)) {
@@ -78,15 +88,6 @@ struct AddWordView: View {
                 if let translated = translation, !translated.isEmpty {
                     Section(header: Text("Translation Result").foregroundStyle(logoGradient)) {
                         VStack(alignment: .leading, spacing: 8) {
-                            if let detected = detectedLanguageCode {
-                                HStack {
-                                    Text("Detected Language")
-                                    Spacer()
-                                    Text(languageName(for: detected))
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
                             HStack {
                                 Text("Translation")
                                 Spacer()
@@ -101,9 +102,6 @@ struct AddWordView: View {
                 Section(header: Text("Context (Optional)").foregroundStyle(logoGradient)) {
                     TextField("Where did you see this? (e.g., K-drama, menu)", text: $context)
                         .autocapitalization(.sentences)
-                        .padding(8)
-                        .background(Color(.systemGray5))
-                        .cornerRadius(10)
                 }
                 
                 if let error = errorMessage {
@@ -139,68 +137,55 @@ struct AddWordView: View {
         .onAppear {
             prewarmNetworkIfNeeded()
         }
+        .translationTask(translationConfiguration) { session in
+            do {
+                let response = try await session.translate(textToTranslate)
+                await MainActor.run {
+                    self.translation = response.targetText
+                    self.isTranslating = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.translation = nil
+                    self.errorMessage = "Translation failed: \(error.localizedDescription)"
+                    self.isTranslating = false
+                }
+            }
+        }
     }
     
     private func prewarmNetworkIfNeeded() {
-        guard !didPrewarmNetwork else { return }
-        didPrewarmNetwork = true
-        // Harmless HEAD request to prewarm network stack
-        guard let url = URL(string: "https://www.google.com") else { return }
-        var request = URLRequest(url: url)
-        request.httpMethod = "HEAD"
-        URLSession.shared.dataTask(with: request) { _, _, _ in }.resume()
+        // No longer needed with Apple Translation API
     }
     
     private func translate(text: String) {
         guard !text.isEmpty else {
             translation = nil
-            detectedLanguageCode = nil
+            isTranslating = false
             return
         }
+        
         isTranslating = true
         errorMessage = nil
-        let escaped = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let url = URL(string: "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=\(targetLanguage)&dt=t&q=\(escaped)")!
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            DispatchQueue.main.async {
-                self.isTranslating = false
-                guard let data = data else {
-                    self.translation = nil
-                    self.detectedLanguageCode = nil
-                    self.errorMessage = "No data received"
-                    return
-                }
-                do {
-                    let json = try JSONSerialization.jsonObject(with: data)
-                    if let arr = json as? [Any],
-                       let first = arr.first as? [Any],
-                       let firstTranslation = first.first as? [Any],
-                       let translated = firstTranslation.first as? String {
-                        self.translation = translated
-                        if arr.count > 2, let lang = arr[2] as? String {
-                            self.detectedLanguageCode = lang
-                        } else {
-                            self.detectedLanguageCode = nil
-                        }
-                    } else {
-                        self.translation = nil
-                        self.detectedLanguageCode = nil
-                        self.errorMessage = "Could not parse translation"
-                    }
-                } catch {
-                    self.translation = nil
-                    self.detectedLanguageCode = nil
-                    self.errorMessage = "Translation failed: \(error.localizedDescription)"
-                }
-            }
-        }.resume()
+        textToTranslate = text
+        
+        if translationConfiguration == nil {
+            // Create initial configuration
+            translationConfiguration = TranslationSession.Configuration(
+                source: Locale.Language(identifier: sourceLanguage),
+                target: Locale.Language(identifier: targetLanguage)
+            )
+        } else {
+            // For subsequent translations, invalidate to trigger new translation
+            translationConfiguration?.invalidate()
+        }
     }
     
     private func saveTranslation(translated: String) {
         dataManager.addWord(
             word: inputText,
             translation: translated,
-            language: detectedLanguageCode ?? targetLanguage,
+            language: targetLanguage,
             context: context.isEmpty ? nil : context
         )
         dismiss()
@@ -210,7 +195,7 @@ struct AddWordView: View {
         if let match = languageOptions.first(where: { $0.code == code }) {
             return match.name
         }
-        return Locale.current.localizedString(forLanguageCode: code) ?? code
+        return code
     }
 }
 
