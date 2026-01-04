@@ -73,9 +73,9 @@ struct GlassCardModifier: ViewModifier {
     }
 }
 
-struct PrimaryButtonModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        content
+struct PrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
             .font(.system(.headline, design: .rounded))
             .foregroundColor(.white)
             .padding()
@@ -83,6 +83,9 @@ struct PrimaryButtonModifier: ViewModifier {
             .background(Theme.Colors.accent)
             .cornerRadius(16)
             .shadow(color: Theme.Colors.accent.opacity(0.3), radius: 8, x: 0, y: 4)
+            .opacity(configuration.isPressed ? 0.8 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.easeOut(duration: 0.2), value: configuration.isPressed)
     }
 }
 
@@ -92,6 +95,6 @@ extension View {
     }
     
     func primaryButtonStyle() -> some View {
-        self.modifier(PrimaryButtonModifier())
+        self.buttonStyle(PrimaryButtonStyle())
     }
 }
