@@ -22,85 +22,115 @@ struct SettingsView: View {
     
     var body: some View {
         NavigationView {
-            List {
-                Section("Statistics") {
-                    HStack {
-                        Text("Total Words")
-                        Spacer()
-                        Text("\(dataManager.fetchWords().count)")
-                            .foregroundColor(.secondary)
-                    }
+            ScrollView {
+                VStack(spacing: 24) {
                     
-                    HStack {
-                        Text("Mastered Words")
-                        Spacer()
-                        Text("\(dataManager.fetchWords().filter { $0.isMastered }.count)")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Words Due for Review")
-                        Spacer()
-                        Text("\(dataManager.fetchWordsDueForReview().count)")
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                Section("Languages") {
-                    ForEach(dataManager.getAvailableLanguages(), id: \.self) { language in
-                        HStack {
-                            Text(language)
-                            Spacer()
-                            Text("\(dataManager.fetchWords(for: language).count) words")
-                                .foregroundColor(.secondary)
+                    // Statistics Section
+                    SettingsSection(title: "Statistics") {
+                        VStack(spacing: 8) {
+                            StatisticsRow(title: "Total Words", value: "\(dataManager.fetchWords().count)")
+                            Divider().background(Color.gray.opacity(0.1))
+                            StatisticsRow(title: "Mastered Words", value: "\(dataManager.fetchWords().filter { $0.isMastered }.count)")
+                            Divider().background(Color.gray.opacity(0.1))
+                            StatisticsRow(title: "Words Due for Review", value: "\(dataManager.fetchWordsDueForReview().count)")
                         }
                     }
-                }
-                
-                Section("Notifications") {
-                    Toggle(isOn: $notificationsEnabled) {
-                        Text("Enable Daily Notifications")
-                    }
-                    .onChange(of: notificationsEnabled) { _ in
-                        updateNotificationsAndBadge()
-                    }
-                    if notificationsEnabled {
-                        DatePicker(
-                            "Daily Reminder Time",
-                            selection: Binding(get: { notificationTime }, set: { setNotificationTime($0) }),
-                            displayedComponents: .hourAndMinute
-                        )
-                    }
-                }
-                
-                Section("Data Management") {
-                    Button("Export Data") {
-                        showingExportSheet = true
-                    }
-                    .foregroundColor(.blue)
                     
-                    Button("Reset All Data") {
-                        showingResetAlert = true
-                    }
-                    .foregroundColor(.red)
-                }
-                
-                Section("About") {
-                    HStack {
-                        Text("Version")
-                        Spacer()
-                        Text("1.0.0")
-                            .foregroundColor(.secondary)
+                    // Languages Section
+                    SettingsSection(title: "Languages") {
+                        ForEach(dataManager.getAvailableLanguages(), id: \.self) { language in
+                            HStack {
+                                Theme.Typography.body(language)
+                                    .foregroundColor(Theme.Colors.textPrimary)
+                                Spacer()
+                                Text("\(dataManager.fetchWords(for: language).count) words")
+                                    .font(.caption)
+                                    .foregroundColor(Theme.Colors.textSecondary)
+                            }
+                            // Don't add divider for the last item - simplified for now
+                            if language != dataManager.getAvailableLanguages().last {
+                                Divider().background(Color.gray.opacity(0.1))
+                            }
+                        }
                     }
                     
-                    Link("Privacy Policy", destination: URL(string: "https://example.com/privacy")!)
-                        .foregroundColor(.blue)
+                    // Notifications Section
+                    SettingsSection(title: "Notifications") {
+                        Toggle(isOn: $notificationsEnabled) {
+                            Theme.Typography.body("Enable Daily Notifications")
+                                .foregroundColor(Theme.Colors.textPrimary)
+                        }
+                        .toggleStyle(SwitchToggleStyle(tint: Theme.Colors.accent))
+                        .onChange(of: notificationsEnabled) { _, _ in
+                            updateNotificationsAndBadge()
+                        }
+                        
+                        if notificationsEnabled {
+                            Divider().background(Color.gray.opacity(0.1))
+                            DatePicker(
+                                "Daily Reminder Time",
+                                selection: Binding(get: { notificationTime }, set: { setNotificationTime($0) }),
+                                displayedComponents: .hourAndMinute
+                            )
+                            .environment(\.colorScheme, .light) // Force light style for cleaner look if needed
+                        }
+                    }
                     
-                    Link("Terms of Service", destination: URL(string: "https://example.com/terms")!)
-                        .foregroundColor(.blue)
+                    // Data Management Section
+                    SettingsSection(title: "Data Management") {
+                        Button(action: { showingExportSheet = true }) {
+                            HStack {
+                                Image(systemName: "square.and.arrow.up")
+                                Theme.Typography.body("Export Data")
+                            }
+                            .foregroundColor(Theme.Colors.accent)
+                        }
+                        
+                        Divider().background(Color.gray.opacity(0.1))
+                        
+                        Button(action: { showingResetAlert = true }) {
+                            HStack {
+                                Image(systemName: "trash")
+                                Theme.Typography.body("Reset All Data")
+                            }
+                            .foregroundColor(Theme.Colors.error)
+                        }
+                    }
+                    
+                    // About Section
+                    SettingsSection(title: "About") {
+                        HStack {
+                            Theme.Typography.body("Version")
+                            Spacer()
+                            Text("1.0.0")
+                                .font(.caption)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                        }
+                    }
+                    
+                    // Footer Links
+                    VStack(spacing: 12) {
+                        Link("Privacy Policy", destination: URL(string: "https://example.com/privacy")!)
+                            .font(.caption)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                        
+                        Link("Terms of Service", destination: URL(string: "https://example.com/terms")!)
+                            .font(.caption)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                    }
+                    .padding(.top, 8)
+                }
+                .padding()
+            }
+            .background(Color.clear)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Theme.Typography.title("Settings")
+                        .foregroundStyle(Theme.Colors.textPrimary)
                 }
             }
-            .navigationTitle("Settings")
             .alert("Reset All Data", isPresented: $showingResetAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Reset", role: .destructive) {
@@ -138,6 +168,48 @@ struct SettingsView: View {
     }
 }
 
+struct SettingsSection<Content: View>: View {
+    let title: String
+    let content: Content
+    
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Theme.Typography.title(title)
+                .font(.headline)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .padding(.leading, 4)
+            
+            VStack(spacing: 16) {
+                content
+            }
+            .padding()
+            .glassCard()
+        }
+    }
+}
+
+struct StatisticsRow: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Theme.Typography.body(title)
+                .foregroundColor(Theme.Colors.textPrimary)
+            Spacer()
+            Text(value)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(Theme.Colors.textSecondary)
+        }
+    }
+}
+
 struct ExportDataView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var dataManager = DataManager.shared
@@ -161,70 +233,76 @@ struct ExportDataView: View {
     }
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                Text("Export Your Data")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Text("Your vocabulary data will be exported as a CSV file that you can open in Excel, Google Sheets, or any spreadsheet application.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+        ZStack {
+            Theme.Colors.background
+                .ignoresSafeArea()
+            
+            NavigationView {
+                VStack(spacing: 24) {
+                    VStack(spacing: 16) {
+                        Theme.Typography.title("Export Your Data")
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                        
+                        Theme.Typography.body("Your vocabulary data will be exported as a CSV file that you can open in Excel, Google Sheets, or any spreadsheet application.")
+                            .foregroundColor(Theme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
                     .padding(.horizontal)
-                
-                VStack(spacing: 12) {
-                    HStack {
-                        Image(systemName: "doc.text")
-                            .foregroundColor(.blue)
-                        Text("\(dataManager.fetchWords().count) words")
-                            .font(.headline)
-                    }
                     
-                    Text("Ready to export")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(12)
-                
-                ShareLink(
-                    item: exportData,
-                    preview: SharePreview(
-                        "LingoLog Vocabulary Export",
-                        image: "doc.text"
-                    )
-                ) {
-                    HStack {
-                        Image(systemName: "square.and.arrow.up")
-                        Text("Export Data")
+                    VStack(spacing: 12) {
+                        HStack {
+                            Image(systemName: "doc.text")
+                                .foregroundColor(Theme.Colors.accent)
+                            Text("\(dataManager.fetchWords().count) words")
+                                .font(.headline)
+                                .foregroundColor(Theme.Colors.textPrimary)
+                        }
+                        
+                        Text("Ready to export")
+                            .font(.caption)
+                            .foregroundColor(Theme.Colors.textSecondary)
                     }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .cornerRadius(10)
+                    .padding(24)
+                    .glassCard()
+                    .padding(.horizontal)
+                    
+                    ShareLink(
+                        item: exportData,
+                        preview: SharePreview(
+                            "LingoLog Vocabulary Export",
+                            image: "doc.text"
+                        )
+                    ) {
+                        HStack {
+                            Image(systemName: "square.and.arrow.up")
+                            Text("Share / Save File")
+                        }
+                    }
+                    .primaryButtonStyle()
+                    .padding(.horizontal)
+                    
+                    Spacer()
                 }
-                .padding(.horizontal)
-                
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("Export Data")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
+                .padding(.top, 32)
+                .navigationTitle("")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            dismiss()
+                        }
+                        .foregroundStyle(Theme.Colors.accent)
                     }
                 }
             }
+            .navigationViewStyle(.stack)
         }
     }
 }
 
 #Preview {
-    SettingsView()
+    ZStack {
+        Theme.Colors.background.ignoresSafeArea()
+        SettingsView()
+    }
 } 
