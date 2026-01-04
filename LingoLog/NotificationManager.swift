@@ -31,14 +31,18 @@ class NotificationManager {
     }
     
     func updateAppBadge(dueCount: Int) {
-        DispatchQueue.main.async {
-            UIApplication.shared.applicationIconBadgeNumber = dueCount
+        UNUserNotificationCenter.current().setBadgeCount(dueCount) { error in
+            if let error = error {
+                print("Error setting badge count: \(error.localizedDescription)")
+            }
         }
     }
     
     func clearBadge() {
-        DispatchQueue.main.async {
-            UIApplication.shared.applicationIconBadgeNumber = 0
+        UNUserNotificationCenter.current().setBadgeCount(0) { error in
+            if let error = error {
+                print("Error clearing badge count: \(error.localizedDescription)")
+            }
         }
     }
 } 

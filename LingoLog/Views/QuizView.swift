@@ -7,12 +7,7 @@ struct QuizView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isModal: Bool = false
     
-    // Logo-inspired gradient
-    private let logoGradient = LinearGradient(
-        colors: [Color.cyan, Color.blue, Color.purple],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    // Note: Removed logoGradient in favor of Theme colors
     
     @State private var wordsDueForReview: [WordEntry] = []
     @State private var currentWordIndex = 0
@@ -37,8 +32,9 @@ struct QuizView: View {
     
     var body: some View {
         ZStack {
-            Color(.systemGray6)
+            Theme.Colors.background
                 .ignoresSafeArea()
+            
             NavigationView {
                 ZStack {
                     if quizCompleted {
@@ -47,8 +43,7 @@ struct QuizView: View {
                             totalQuestions: totalQuestions,
                             onDismiss: { dismiss() },
                             onRetake: retakeQuiz,
-                            noWordsToRetake: noWordsToRetake,
-                            gradient: logoGradient
+                            noWordsToRetake: noWordsToRetake
                         )
                         .transition(.opacity)
                     } else if let word = currentWord {
@@ -59,14 +54,13 @@ struct QuizView: View {
                             showingAnswer: $showingAnswer,
                             userAnswer: $userAnswer,
                             isCorrect: $isCorrect,
-                            onAnswerSubmitted: { handleAnswerWithFeedback() },
-                            gradient: logoGradient
+                            onAnswerSubmitted: { handleAnswerWithFeedback() }
                         )
                         .matchedGeometryEffect(id: "card", in: animation)
                         .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                         .animation(.easeInOut, value: currentWordIndex)
                     } else {
-                        NoWordsView(gradient: logoGradient)
+                        NoWordsView()
                             .transition(.opacity)
                     }
                 }
@@ -77,7 +71,7 @@ struct QuizView: View {
                     if isModal {
                         ToolbarItem(placement: .navigationBarLeading) {
                             Button("Close") { dismiss() }
-                                .foregroundStyle(logoGradient)
+                                .foregroundStyle(Theme.Colors.accent)
                         }
                     }
                 }
@@ -99,7 +93,7 @@ struct QuizView: View {
             Group {
                 feedbackColor
                     .ignoresSafeArea()
-                    .opacity(showFeedbackOverlay ? 0.7 : 0.0)
+                    .opacity(showFeedbackOverlay ? 0.3 : 0.0)
                     .animation(.easeInOut(duration: 0.18), value: showFeedbackOverlay)
                 VStack {
                     Spacer()
@@ -107,7 +101,7 @@ struct QuizView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 120, height: 120)
-                        .foregroundStyle(logoGradient)
+                        .foregroundStyle(Color.white)
                         .shadow(radius: 10)
                         .scaleEffect(showFeedbackOverlay ? 1.0 : 0.5)
                         .opacity(showFeedbackOverlay ? 1.0 : 0.0)
@@ -144,7 +138,7 @@ struct QuizView: View {
         word.updateMasteryLevel(correct: isAnswerCorrect)
         dataManager.save()
         // Feedback overlay
-        feedbackColor = isAnswerCorrect ? .green : .red
+        feedbackColor = isAnswerCorrect ? Theme.Colors.success : Theme.Colors.error
         feedbackIcon = isAnswerCorrect ? "checkmark.circle.fill" : "xmark.circle.fill"
         // Only show overlay for correct answers
         showFeedbackOverlay = isAnswerCorrect
@@ -207,24 +201,23 @@ struct QuizQuestionCardView: View {
     @Binding var userAnswer: String
     @Binding var isCorrect: Bool
     let onAnswerSubmitted: () -> Void
-    let gradient: LinearGradient
     
     var body: some View {
         VStack(spacing: 0) {
             // Progress
             VStack(spacing: 8) {
                 ProgressView(value: Double(questionIndex), total: Double(max(totalQuestions, 1)))
-                    .accentColor(.blue)
+                    .accentColor(Theme.Colors.accent)
                     .padding(.top, 32)
                 HStack {
-                    Text("Question \(questionIndex) of \(totalQuestions)")
+                    Theme.Typography.body("Question \(questionIndex) of \(totalQuestions)")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Theme.Colors.textSecondary)
                     Spacer()
                     HStack(spacing: 4) {
                         ForEach(0..<5, id: \.self) { index in
                             Circle()
-                                .fill(index < Int(word.masteryLevel) ? Color.green : Color.gray.opacity(0.3))
+                                .fill(index < Int(word.masteryLevel) ? Theme.Colors.success : Color.gray.opacity(0.3))
                                 .frame(width: 8, height: 8)
                         }
                     }
@@ -235,76 +228,85 @@ struct QuizQuestionCardView: View {
             // Card
             VStack(spacing: 24) {
                 VStack(spacing: 8) {
-                    Text("Translate this word:")
+                    Theme.Typography.body("Translate this word:")
                         .font(.headline)
-                        .foregroundColor(.secondary)
-                    Text(word.word ?? "")
-                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(Theme.Colors.textSecondary)
+                    
+                    Theme.Typography.display(word.word ?? "")
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    
                     if let context = word.context, !context.isEmpty {
-                        Text("Context: \(context)")
+                        Theme.Typography.body("Context: \(context)")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Theme.Colors.textSecondary)
                             .italic()
                             .multilineTextAlignment(.center)
                     }
-                    Text("Language: \(word.language ?? "")")
+                    
+                    Text(word.language ?? "")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(Theme.Colors.secondaryAccent.opacity(0.1))
+                        .foregroundColor(Theme.Colors.secondaryAccent)
+                        .cornerRadius(12)
                 }
                 .padding(.top, 16)
+                
                 // Answer
-                VStack(spacing: 12) {
+                VStack(spacing: 16) {
                     TextField("Type your answer", text: $userAnswer)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                         .submitLabel(.done)
-                        .padding(12)
-                        .background(Color(.secondarySystemBackground))
-                        .cornerRadius(10)
-                        .font(.title3)
+                        .padding(16)
+                        .background(Color.white.opacity(0.5))
+                        .cornerRadius(16)
+                        .font(.system(.title3, design: .rounded))
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Theme.Colors.accent.opacity(0.3), lineWidth: 1)
+                        )
                         .disabled(showingAnswer)
                         .onSubmit {
                             if !userAnswer.isEmpty {
                                 onAnswerSubmitted()
                             }
                         }
+                    
                     if showingAnswer {
                         HStack(spacing: 8) {
                             Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(isCorrect ? .green : .red)
+                                .foregroundColor(isCorrect ? Theme.Colors.success : Theme.Colors.error)
                             Text(isCorrect ? "Correct!" : "Correct answer: \(word.translation ?? "")")
-                                .foregroundColor(isCorrect ? .green : .red)
+                                .font(.system(.body, design: .rounded))
+                                .foregroundColor(isCorrect ? Theme.Colors.success : Theme.Colors.error)
                                 .fontWeight(.semibold)
                         }
-                        .accessibilityElement(children: .combine)
                     }
+                    
                     Button(action: {
                         if !userAnswer.isEmpty {
                             onAnswerSubmitted()
                         }
                     }) {
                         Text("Submit")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    .primaryButtonStyle()
                     .disabled(userAnswer.isEmpty)
+                    .opacity(userAnswer.isEmpty ? 0.6 : 1.0)
                 }
             }
-            .padding(24)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
-            )
+            .padding(32)
+            .glassCard()
             .padding(.horizontal, 24)
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.clear)
     }
 }
 
@@ -314,7 +316,6 @@ struct QuizResultView: View {
     let onDismiss: () -> Void
     let onRetake: () -> Void
     let noWordsToRetake: Bool
-    let gradient: LinearGradient
     
     private var percentage: Double {
         guard totalQuestions > 0 else { return 0 }
@@ -337,74 +338,64 @@ struct QuizResultView: View {
         VStack(spacing: 30) {
             Image(systemName: noWordsToRetake ? "checkmark.circle.fill" : (percentage >= 80 ? "star.fill" : "book.fill"))
                 .font(.system(size: 60))
-                .foregroundColor(noWordsToRetake ? .green : (percentage >= 80 ? .yellow : .blue))
+                .foregroundColor(noWordsToRetake ? Theme.Colors.success : (percentage >= 80 ? .yellow : Theme.Colors.secondaryAccent))
             
             VStack(spacing: 16) {
-                Text(noWordsToRetake ? "No Words to Retake" : "Quiz Complete!")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+                Theme.Typography.display(noWordsToRetake ? "No Words to Retake" : "Quiz Complete!")
+                    .foregroundStyle(Theme.Colors.textPrimary)
                 
-                Text(message)
+                Theme.Typography.body(message)
                     .font(.title3)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Theme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
             }
             
             if !noWordsToRetake {
                 VStack(spacing: 8) {
-                    Text("\(correctAnswers) out of \(totalQuestions) correct")
-                        .font(.title2)
+                    Theme.Typography.title("\(correctAnswers) out of \(totalQuestions) correct")
                         .fontWeight(.semibold)
                     
                     Text("\(Int(percentage))%")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(percentage >= 80 ? .green : .blue)
+                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                        .foregroundColor(percentage >= 80 ? Theme.Colors.success : Theme.Colors.secondaryAccent)
                 }
                 
                 Button(action: onRetake) {
                     Text("Retake Quiz")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.green)
-                        .cornerRadius(10)
                 }
+                .primaryButtonStyle()
             }
             
             Button(action: onDismiss) {
                 Text("Done")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(Theme.Colors.textSecondary)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue)
-                    .cornerRadius(10)
             }
         }
+        .padding()
+        .glassCard()
         .padding()
     }
 }
 
 struct NoWordsView: View {
-    let gradient: LinearGradient
-    
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 60))
-                .foregroundColor(.green)
+                .foregroundColor(Theme.Colors.success)
             
-            Text("No words due for review!")
-                .font(.title2)
-                .fontWeight(.semibold)
+            Theme.Typography.title("No words due for review!")
+                .foregroundStyle(Theme.Colors.textPrimary)
             
-            Text("Great job! All your words are up to date. Add some new words to start learning.")
-                .font(.body)
-                .foregroundColor(.secondary)
+            Theme.Typography.body("Great job! All your words are up to date. Add some new words to start learning.")
+                .foregroundColor(Theme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
         }
+        .padding(32)
+        .glassCard()
         .padding()
     }
 }

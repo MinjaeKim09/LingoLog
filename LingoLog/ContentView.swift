@@ -34,7 +34,7 @@ struct ContentView: View {
                     Text("Settings")
                 }
         }
-        .accentColor(.blue)
+        .accentColor(Theme.Colors.accent)
     }
 }
 
