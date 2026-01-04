@@ -22,15 +22,7 @@ struct DashboardView: View {
     }
     
     private var learningStreak: Int {
-        // Simple streak calculation - can be enhanced later
-        let words = dataManager.fetchWords()
-        let today = Calendar.current.startOfDay(for: Date())
-        let wordsReviewedToday = words.filter { word in
-            guard let lastReviewed = word.lastReviewed else { return false }
-            return Calendar.current.isDate(lastReviewed, inSameDayAs: today)
-        }.count
-        
-        return wordsReviewedToday > 0 ? 1 : 0 // Simplified for now
+        StudyHistoryManager.shared.getCurrentStreak()
     }
     
     private var notificationTimeString: String {
@@ -187,9 +179,9 @@ struct StatCard: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(value)
-                    .font(.system(.title, design: .serif))
-                    .fontWeight(.bold)
-                    .foregroundColor(Theme.Colors.textPrimary)
+                .font(.system(.title, design: .serif))
+                .fontWeight(.bold)
+                .foregroundColor(Theme.Colors.textPrimary)
                 
                 Theme.Typography.body(title)
                     .font(.caption)
@@ -271,4 +263,4 @@ struct EmptyStateView: View {
         Theme.Colors.background.ignoresSafeArea()
         DashboardView()
     }
-} 
+}
