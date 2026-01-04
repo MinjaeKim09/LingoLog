@@ -124,13 +124,17 @@ struct SettingsView: View {
                     
                     // Footer Links
                     VStack(spacing: 12) {
-                        Link("Privacy Policy", destination: URL(string: "https://example.com/privacy")!)
-                            .font(.caption)
-                            .foregroundColor(Theme.Colors.textSecondary)
+                        if let privacyURL = URL(string: "https://example.com/privacy") {
+                            Link("Privacy Policy", destination: privacyURL)
+                                .font(.caption)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                        }
                         
-                        Link("Terms of Service", destination: URL(string: "https://example.com/terms")!)
-                            .font(.caption)
-                            .foregroundColor(Theme.Colors.textSecondary)
+                        if let termsURL = URL(string: "https://example.com/terms") {
+                            Link("Terms of Service", destination: termsURL)
+                                .font(.caption)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                        }
                     }
                     .padding(.top, 8)
                 }

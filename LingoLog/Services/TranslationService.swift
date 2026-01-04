@@ -33,7 +33,6 @@ class TranslationService {
     // API Key loaded from Secrets.plist
     private let apiKey: String
     
-    // TODO: In a production app, move these to a secure configuration
     private let region = "eastus"
     private let endpoint = "https://api.cognitive.microsofttranslator.com/translate"
     private let languagesEndpoint = "https://api.cognitive.microsofttranslator.com/languages"
