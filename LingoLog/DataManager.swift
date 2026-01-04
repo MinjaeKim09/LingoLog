@@ -61,7 +61,7 @@ class DataManager: ObservableObject {
     }
     
     func addWord(word: String, translation: String, language: String, context: String? = nil) {
-        let newWord = WordEntry.create(in: viewContext, 
+        _ = WordEntry.create(in: viewContext, 
                                       word: word, 
                                       translation: translation, 
                                       language: language, 

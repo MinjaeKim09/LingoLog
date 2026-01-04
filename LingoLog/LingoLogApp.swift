@@ -19,13 +19,16 @@ struct LingoLogApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(dataManager)
-                .onAppear {
-                    updateNotificationsAndBadge()
-                }
+            ZStack {
+                Theme.Colors.background.ignoresSafeArea()
+                ContentView()
+                    .environmentObject(dataManager)
+                    .onAppear {
+                        updateNotificationsAndBadge()
+                    }
+            }
         }
-        .onChange(of: scenePhase) { newPhase in
+        .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active || newPhase == .background {
                 updateNotificationsAndBadge()
             }

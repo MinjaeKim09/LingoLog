@@ -6,12 +6,7 @@ struct WordListView: View {
     @State private var showingAddWord = false
     @State private var searchText = ""
     
-    // Logo-inspired gradient
-    private let logoGradient = LinearGradient(
-        colors: [Color.cyan, Color.blue, Color.purple],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    // Note: Removed logoGradient in favor of Theme colors
     
     private var filteredWords: [WordEntry] {
         let words = dataManager.fetchWords(for: selectedLanguage == "All" ? nil : selectedLanguage)
@@ -35,53 +30,72 @@ struct WordListView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Language Filter
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(availableLanguages, id: \.self) { language in
-                            LanguageFilterButton(
-                                language: language,
-                                isSelected: selectedLanguage == language,
-                                gradient: logoGradient
-                            ) {
-                                selectedLanguage = language
+                // Header Area
+                VStack(spacing: 16) {
+                    // Language Filter
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(availableLanguages, id: \.self) { language in
+                                LanguageFilterButton(
+                                    language: language,
+                                    isSelected: selectedLanguage == language
+                                ) {
+                                    selectedLanguage = language
+                                }
                             }
                         }
+                        .padding(.horizontal)
                     }
+                    
+                    // Search Bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                        TextField("Search words...", text: $searchText)
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                    }
+                    .padding()
+                    .background(Color.white.opacity(0.4))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    )
                     .padding(.horizontal)
                 }
-                .padding(.vertical, 8)
-                
-                // Search Bar
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(logoGradient)
-                    TextField("Search words...", text: $searchText)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(10)
-                .padding(.horizontal)
+                .padding(.vertical)
+                .background(Theme.Colors.background.opacity(0.5)) // Slight separation for header
                 
                 // Word List
-                List {
-                    ForEach(filteredWords, id: \.id) { word in
-                        WordRowView(word: word, gradient: logoGradient)
-                            .listRowBackground(Color(.systemGray6))
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        ForEach(filteredWords, id: \.id) { word in
+                            WordRowView(word: word)
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        dataManager.deleteWord(word)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                        }
                     }
-                    .onDelete(perform: deleteWords)
+                    .padding()
                 }
-                .listStyle(PlainListStyle())
-                .background(Color(.systemGray6))
             }
-            .background(Color(.systemGray6))
-            .navigationTitle("My Words")
+            .background(Color.clear)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Theme.Typography.title("My Words")
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddWord = true }) {
-                        Image(systemName: "plus")
-                            .foregroundStyle(logoGradient)
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(Theme.Colors.accent)
                     }
                 }
             }
@@ -90,110 +104,111 @@ struct WordListView: View {
             }
         }
     }
-    
-    private func deleteWords(offsets: IndexSet) {
-        for index in offsets {
-            let word = filteredWords[index]
-            dataManager.deleteWord(word)
-        }
-    }
 }
 
 struct WordRowView: View {
     let word: WordEntry
-    let gradient: LinearGradient
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(word.word ?? "")
+                    Theme.Typography.title(word.word ?? "")
                         .font(.headline)
-                        .foregroundColor(.primary)
-                    Text(word.translation ?? "")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    Text(word.language ?? "")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    
+                    Theme.Typography.body(word.translation ?? "")
+                        .foregroundColor(Theme.Colors.textSecondary)
                 }
+                
                 Spacer()
+                
                 VStack(alignment: .trailing, spacing: 4) {
                     HStack(spacing: 4) {
                         ForEach(0..<5, id: \.self) { index in
                             Circle()
-                                .fill(index < Int(word.masteryLevel) ? Color.green : Color.gray.opacity(0.3))
+                                .fill(index < Int(word.masteryLevel) ? Theme.Colors.success : Color.gray.opacity(0.3))
                                 .frame(width: 8, height: 8)
                         }
                     }
+                    
+                    Text(word.language ?? "")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Theme.Colors.secondaryAccent.opacity(0.1))
+                        .foregroundColor(Theme.Colors.secondaryAccent)
+                        .cornerRadius(8)
                 }
             }
+            
             if let context = word.context, !context.isEmpty {
-                Text(context)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .italic()
+                HStack(spacing: 6) {
+                    Image(systemName: "quote.opening")
+                        .font(.caption)
+                        .foregroundStyle(Theme.Colors.accent)
+                    Text(context)
+                        .font(.system(.caption, design: .serif))
+                        .italic()
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
             }
+            
+            Divider()
+                .background(Color.gray.opacity(0.2))
+            
             HStack {
                 if let dateAdded = word.dateAdded {
                     Text("Added \(dateAdded.formatted(date: .abbreviated, time: .omitted))")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Theme.Colors.textSecondary.opacity(0.8))
                 }
                 Spacer()
                 if word.reviewCount > 0 {
-                    Text("Reviewed \(word.reviewCount) times")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text("\(word.reviewCount)")
+                    }
+                    .font(.caption2)
+                    .foregroundColor(Theme.Colors.textSecondary.opacity(0.8))
                 }
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
-        .background(Color(.systemGray5))
-        .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(gradient, lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.06), radius: 2, x: 0, y: 1)
+        .padding()
+        .glassCard()
     }
 }
 
 struct LanguageFilterButton: View {
     let language: String
     let isSelected: Bool
-    let gradient: LinearGradient
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
             Text(language)
+                .font(.system(.subheadline, design: .rounded))
+                .fontWeight(isSelected ? .semibold : .regular)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(isSelected ? .white : Theme.Colors.textPrimary)
         }
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(isSelected ? gradient : LinearGradient(colors: [Color.gray.opacity(0.2)], startPoint: .leading, endPoint: .trailing))
+                .fill(isSelected ? Theme.Colors.accent : Color.white.opacity(0.5))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(gradient, lineWidth: isSelected ? 2 : 1)
+                .stroke(isSelected ? Theme.Colors.accent : Color.black.opacity(0.05), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-    }
-}
-
-struct TextLabel: View {
-    let label: String
-    var body: some View {
-        Text(label)
-            .font(.caption2)
-            .foregroundColor(.gray)
+        .shadow(color: isSelected ? Theme.Colors.accent.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
     }
 }
 
 #Preview {
-    WordListView()
+    ZStack {
+        Theme.Colors.background.ignoresSafeArea()
+        WordListView()
+    }
 } 
