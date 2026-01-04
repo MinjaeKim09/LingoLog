@@ -5,12 +5,7 @@ struct DashboardView: View {
     @State private var showingAddWord = false
     @State private var showingQuiz = false
     
-    // Logo-inspired gradient
-    private let logoGradient = LinearGradient(
-        colors: [Color.cyan, Color.blue, Color.purple],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    // Note: Removed logoGradient in favor of Theme colors
     
     private var totalWords: Int {
         dataManager.fetchWords().count
@@ -50,21 +45,19 @@ struct DashboardView: View {
                 VStack(spacing: 24) {
                     // Welcome Section
                     VStack(spacing: 8) {
-                        Text("Welcome to LingoLog!")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
+                        Theme.Typography.display("Welcome to LingoLog")
+                            .foregroundStyle(Theme.Colors.textPrimary)
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(logoGradient)
                         
-                        Text("Your personal language learning companion")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                        Theme.Typography.body("Your personal language learning companion")
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                        
                         HStack(spacing: 6) {
                             Image(systemName: "bell.fill")
-                                .foregroundColor(.orange)
+                                .foregroundColor(Theme.Colors.accent)
                             Text("Daily reminder at \(notificationTimeString)")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Theme.Colors.textSecondary)
                         }
                     }
                     .padding(.top)
@@ -74,8 +67,7 @@ struct DashboardView: View {
                         QuickActionButton(
                             title: "Add Word",
                             subtitle: "New vocabulary",
-                            icon: "plus.circle.fill",
-                            gradient: logoGradient
+                            icon: "plus.circle.fill"
                         ) {
                             showingAddWord = true
                         }
@@ -83,8 +75,7 @@ struct DashboardView: View {
                         QuickActionButton(
                             title: "Take Quiz",
                             subtitle: "\(wordsDueForReview) words due",
-                            icon: "brain.head.profile",
-                            gradient: logoGradient
+                            icon: "brain.head.profile"
                         ) {
                             showingQuiz = true
                         }
@@ -98,26 +89,22 @@ struct DashboardView: View {
                         StatCard(
                             title: "Total Words",
                             value: "\(totalWords)",
-                            icon: "book.fill",
-                            gradient: logoGradient
+                            icon: "book.fill"
                         )
                         StatCard(
                             title: "Mastered Words",
                             value: "\(masteredWords)",
-                            icon: "star.fill",
-                            gradient: logoGradient
+                            icon: "star.fill"
                         )
                         StatCard(
                             title: "Due for Review",
                             value: "\(wordsDueForReview)",
-                            icon: "clock.fill",
-                            gradient: logoGradient
+                            icon: "clock.fill"
                         )
                         StatCard(
                             title: "Learning Streak",
                             value: "\(learningStreak) day\(learningStreak == 1 ? "" : "s")",
-                            icon: "flame.fill",
-                            gradient: logoGradient
+                            icon: "flame.fill"
                         )
                     }
                     
@@ -130,8 +117,8 @@ struct DashboardView: View {
                 }
                 .padding()
             }
-            .background(Color(.systemGray6))
-            .navigationTitle("Dashboard")
+            .background(Color.clear) // Allow global ZStack background to show
+            .navigationTitle("")
             .navigationBarHidden(true)
             .sheet(isPresented: $showingAddWord) {
                 AddWordView()
@@ -147,33 +134,30 @@ struct QuickActionButton: View {
     let title: String
     let subtitle: String
     let icon: String
-    let gradient: LinearGradient
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundStyle(gradient)
+                    .font(.title)
+                    .foregroundStyle(Theme.Colors.accent)
                 
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                VStack(spacing: 4) {
+                    Theme.Typography.title(title)
+                        .font(.headline) // Override size slightly for button context
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    
+                    Theme.Typography.body(subtitle)
+                        .font(.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
             }
             .frame(maxWidth: .infinity)
-            .padding()
-            .background(Color(.systemGray5))
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(gradient, lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+            .padding(.vertical, 20)
+            .padding(.horizontal, 10)
+            .glassCard()
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -183,37 +167,30 @@ struct StatCard: View {
     let title: String
     let value: String
     let icon: String
-    let gradient: LinearGradient
     
     var body: some View {
         VStack(spacing: 12) {
             HStack {
                 Image(systemName: icon)
                     .font(.title2)
-                    .foregroundStyle(gradient)
+                    .foregroundStyle(Theme.Colors.secondaryAccent)
                 Spacer()
             }
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(value)
-                    .font(.title)
+                    .font(.system(.title, design: .serif))
                     .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(Theme.Colors.textPrimary)
                 
-                Text(title)
+                Theme.Typography.body(title)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Theme.Colors.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding()
-        .background(Color(.systemGray5))
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(gradient, lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .glassCard()
     }
 }
 
@@ -226,33 +203,35 @@ struct RecentWordsSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Recent Words")
-                .font(.title2)
-                .fontWeight(.semibold)
+            Theme.Typography.title("Recent Words")
+                .foregroundColor(Theme.Colors.textPrimary)
+            
             ForEach(recentWords, id: \.id) { word in
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(word.word ?? "")
-                            .font(.headline)
-                        Text(word.translation ?? "")
+                        Theme.Typography.body(word.word ?? "")
+                            .fontWeight(.medium)
+                            .foregroundColor(Theme.Colors.textPrimary)
+                        
+                        Theme.Typography.body(word.translation ?? "")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                        
                         Text(word.language ?? "")
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundColor(Theme.Colors.secondaryAccent)
                     }
                     Spacer()
                     HStack(spacing: 4) {
                         ForEach(0..<5, id: \.self) { index in
                             Circle()
-                                .fill(index < Int(word.masteryLevel) ? Color.green : Color.gray.opacity(0.3))
+                                .fill(index < Int(word.masteryLevel) ? Theme.Colors.success : Color.gray.opacity(0.3))
                                 .frame(width: 6, height: 6)
                         }
                     }
                 }
                 .padding()
-                .background(Color.gray.opacity(0.05))
-                .cornerRadius(8)
+                .glassCard()
             }
         }
     }
@@ -263,23 +242,25 @@ struct EmptyStateView: View {
         VStack(spacing: 20) {
             Image(systemName: "book.closed")
                 .font(.system(size: 60))
-                .foregroundColor(.gray)
+                .foregroundColor(Theme.Colors.textSecondary.opacity(0.3))
             
             VStack(spacing: 8) {
-                Text("No words yet!")
-                    .font(.title2)
-                    .fontWeight(.semibold)
+                Theme.Typography.title("No words yet!")
+                    .foregroundColor(Theme.Colors.textPrimary)
                 
-                Text("Start building your vocabulary by adding your first word.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
+                Theme.Typography.body("Start building your vocabulary by adding your first word.")
+                    .foregroundColor(Theme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
             }
         }
         .padding()
+        .glassCard()
     }
 }
 
 #Preview {
-    DashboardView()
+    ZStack {
+        Theme.Colors.background.ignoresSafeArea()
+        DashboardView()
+    }
 } 
