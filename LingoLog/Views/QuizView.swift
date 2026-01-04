@@ -3,11 +3,245 @@ import Combine
 import UIKit
 
 struct QuizView: View {
+    @State private var showingSession = false
     @ObservedObject var dataManager = DataManager.shared
-    @Environment(\.dismiss) private var dismiss
-    @State private var isModal: Bool = false
     
-    // Note: Removed logoGradient in favor of Theme colors
+    var body: some View {
+        ZStack {
+            Theme.Colors.background
+                .ignoresSafeArea()
+            
+            if showingSession {
+                QuizSessionView(
+                    onValidationComplete: {
+                        // After quiz validation/completion, we can return to home
+                        // The session view handles its own internal "Done" state which calls onDismiss
+                    },
+                    onDismiss: {
+                        withAnimation {
+                            showingSession = false
+                        }
+                    }
+                )
+                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .trailing)))
+            } else {
+                QuizHomeView(onStartQuiz: {
+                    withAnimation {
+                        showingSession = true
+                    }
+                })
+                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .leading)))
+            }
+        }
+    }
+}
+
+// MARK: - Quiz Home View
+
+private struct QuizHomeView: View {
+    @ObservedObject var dataManager = DataManager.shared
+    let onStartQuiz: () -> Void
+    
+    // Countdown timer
+    @State private var timeRemaining: String = ""
+    @State private var timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    
+    private var wordsDue: [WordEntry] {
+        dataManager.fetchWordsDueForReview()
+    }
+    
+    private var nextReviewDate: Date? {
+        let allWords = dataManager.fetchWords()
+        let unmastered = allWords.filter { !$0.isMastered && $0.nextReviewDate != nil }
+        return unmastered.min(by: { $0.nextReviewDate! < $1.nextReviewDate! })?.nextReviewDate
+    }
+    
+    private var isReady: Bool {
+        !wordsDue.isEmpty
+    }
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 32) {
+                // Header
+                VStack(spacing: 8) {
+                    Theme.Typography.display("Quiz Time")
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                    Theme.Typography.body("Keep your streak alive!")
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+                .padding(.top, 40)
+                
+                // Status Section
+                VStack(spacing: 24) {
+                    if isReady {
+                        // Ready State
+                        VStack(spacing: 16) {
+                            ZStack {
+                                Circle()
+                                    .fill(Theme.Colors.accent.opacity(0.1))
+                                    .frame(width: 120, height: 120)
+                                
+                                Image(systemName: "brain.head.profile")
+                                    .font(.system(size: 50))
+                                    .foregroundStyle(Theme.Colors.accent)
+                            }
+                            
+                            VStack(spacing: 4) {
+                                Text("\(wordsDue.count)")
+                                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Theme.Colors.textPrimary)
+                                
+                                Text(wordsDue.count == 1 ? "word ready" : "words ready")
+                                    .font(.headline)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                            }
+                        }
+                    } else {
+                        // Waiting State
+                        VStack(spacing: 16) {
+                            ZStack {
+                                Circle()
+                                    .fill(Theme.Colors.secondaryAccent.opacity(0.1))
+                                    .frame(width: 120, height: 120)
+                                
+                                Image(systemName: "clock.fill")
+                                    .font(.system(size: 50))
+                                    .foregroundStyle(Theme.Colors.secondaryAccent)
+                            }
+                            
+                            VStack(spacing: 4) {
+                                if let nextDate = nextReviewDate {
+                                    Text("Next Review In")
+                                        .font(.caption)
+                                        .textCase(.uppercase)
+                                        .foregroundStyle(Theme.Colors.textSecondary)
+                                    
+                                    Text(timeRemaining)
+                                        .font(.system(size: 32, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(Theme.Colors.textPrimary)
+                                        .onReceive(timer) { _ in
+                                            updateTimer(targetDate: nextDate)
+                                        }
+                                        .onAppear {
+                                            updateTimer(targetDate: nextDate)
+                                        }
+                                } else {
+                                    Text("All Caught Up!")
+                                        .font(.title2)
+                                        .fontWeight(.bold)
+                                        .foregroundStyle(Theme.Colors.success)
+                                    
+                                    Text("Add more words to continue learning")
+                                        .font(.body)
+                                        .foregroundStyle(Theme.Colors.textSecondary)
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal)
+                                }
+                            }
+                        }
+                    }
+                    
+                    Button(action: onStartQuiz) {
+                        HStack {
+                            Image(systemName: "play.fill")
+                            Text("Take Quiz")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .primaryButtonStyle()
+                    .disabled(!isReady)
+                    .opacity(isReady ? 1.0 : 0.5)
+                }
+                .padding(32)
+                .glassCard()
+                .padding(.horizontal)
+                
+                // Streak Calendar Section
+                VStack(spacing: 16) {
+                    HStack {
+                        Theme.Typography.title("Study Streak")
+                        Spacer()
+                        Image(systemName: "flame.fill")
+                            .foregroundStyle(Theme.Colors.warning)
+                    }
+                    
+                    StreakCalendarView()
+                }
+                .padding(24)
+                .glassCard()
+                .padding(.horizontal)
+            }
+        }
+    }
+    
+    private func updateTimer(targetDate: Date) {
+        let now = Date()
+        let diff = targetDate.timeIntervalSince(now)
+        
+        if diff <= 0 {
+            timeRemaining = "Ready!"
+        } else {
+            let hours = Int(diff) / 3600
+            let minutes = (Int(diff) % 3600) / 60
+            let seconds = Int(diff) % 60
+            timeRemaining = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        }
+    }
+}
+
+// MARK: - Streak Calendar View
+
+private struct StreakCalendarView: View {
+    let daysToDisplay = 14
+    let historyManager = StudyHistoryManager.shared
+    
+    private var dates: [Date] {
+        historyManager.getRecentHistory(days: daysToDisplay)
+    }
+    
+    private let weekDays = ["S", "M", "T", "W", "T", "F", "S"]
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 12) {
+                // Day headers (only need one row if we map dates to day accessors, but simple grid is easier)
+                ForEach(0..<7, id: \.self) { index in
+                    Text(weekDays[index])
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+                
+                ForEach(dates, id: \.self) { date in
+                    let hasStudied = historyManager.hasStudied(on: date)
+                    let isToday = Calendar.current.isDateInToday(date)
+                    
+                    ZStack {
+                        Circle()
+                            .fill(hasStudied ? Theme.Colors.success : (isToday ? Theme.Colors.accent.opacity(0.1) : Color.gray.opacity(0.1)))
+                            .frame(width: 30, height: 30)
+                        
+                        // If it's today and not studied yet, show outline
+                        if isToday && !hasStudied {
+                            Circle()
+                                .stroke(Theme.Colors.accent, lineWidth: 1)
+                                .frame(width: 30, height: 30)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+// MARK: - Quiz Session View (Refactored from original QuizView)
+
+private struct QuizSessionView: View {
+    @ObservedObject var dataManager = DataManager.shared
+    var onValidationComplete: () -> Void
+    var onDismiss: () -> Void
     
     @State private var wordsDueForReview: [WordEntry] = []
     @State private var currentWordIndex = 0
@@ -20,7 +254,6 @@ struct QuizView: View {
     @State private var totalQuestions = 0
     @State private var noWordsToRetake = false
     @Namespace private var animation
-    @State private var animateCard = false
     @State private var showFeedbackOverlay = false
     @State private var feedbackColor: Color = .clear
     @State private var feedbackIcon: String = ""
@@ -31,70 +264,57 @@ struct QuizView: View {
     }
     
     var body: some View {
-        ZStack {
-            Theme.Colors.background
-                .ignoresSafeArea()
-            
-            NavigationView {
-                ZStack {
-                    if quizCompleted {
-                        QuizResultView(
-                            correctAnswers: correctAnswers,
-                            totalQuestions: totalQuestions,
-                            onDismiss: { dismiss() },
-                            onRetake: retakeQuiz,
-                            noWordsToRetake: noWordsToRetake
-                        )
+        NavigationView {
+            ZStack {
+                if quizCompleted {
+                    QuizResultView(
+                        correctAnswers: correctAnswers,
+                        totalQuestions: totalQuestions,
+                        onDismiss: onDismiss,
+                        onRetake: retakeQuiz,
+                        noWordsToRetake: noWordsToRetake
+                    )
+                    .transition(.opacity)
+                } else if let word = currentWord {
+                    QuizQuestionCardView(
+                        word: word,
+                        questionIndex: currentWordIndex + 1,
+                        totalQuestions: totalQuestions,
+                        showingAnswer: $showingAnswer,
+                        userAnswer: $userAnswer,
+                        isCorrect: $isCorrect,
+                        onAnswerSubmitted: { handleAnswerWithFeedback() }
+                    )
+                    .matchedGeometryEffect(id: "card", in: animation)
+                    .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                    .animation(.easeInOut, value: currentWordIndex)
+                } else {
+                    // Fallback, though Home view should prevent this
+                    NoWordsView()
                         .transition(.opacity)
-                    } else if let word = currentWord {
-                        QuizQuestionCardView(
-                            word: word,
-                            questionIndex: currentWordIndex + 1,
-                            totalQuestions: totalQuestions,
-                            showingAnswer: $showingAnswer,
-                            userAnswer: $userAnswer,
-                            isCorrect: $isCorrect,
-                            onAnswerSubmitted: { handleAnswerWithFeedback() }
-                        )
-                        .matchedGeometryEffect(id: "card", in: animation)
-                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
-                        .animation(.easeInOut, value: currentWordIndex)
-                    } else {
-                        NoWordsView()
-                            .transition(.opacity)
-                    }
-                }
-                .navigationTitle("")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    // Only show Close button if presented modally
-                    if isModal {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Close") { dismiss() }
-                                .foregroundStyle(Theme.Colors.accent)
-                        }
-                    }
-                }
-                .onAppear {
-                    loadWordsForQuiz()
-                    // Detect if presented modally (sheet or fullScreenCover)
-                    if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let root = scene.windows.first?.rootViewController {
-                        var vc = root.presentedViewController
-                        while let presented = vc?.presentedViewController { vc = presented }
-                        isModal = vc != nil
-                    }
                 }
             }
-            .navigationViewStyle(.stack)
-            .edgesIgnoringSafeArea(.all)
-            // --- FEEDBACK OVERLAY ---
-            // Always render, animate opacity
-            if showFeedbackOverlay {
-                Group {
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Quit") { onDismiss() }
+                        .foregroundStyle(Theme.Colors.accent)
+                }
+            }
+            .onAppear {
+                loadWordsForQuiz()
+            }
+        }
+        .navigationViewStyle(.stack)
+        // --- FEEDBACK OVERLAY ---
+        .overlay(
+            Group {
+                if showFeedbackOverlay {
                     feedbackColor
                         .ignoresSafeArea()
                         .opacity(0.3)
+                        .transition(.opacity)
                     
                     VStack {
                         Spacer()
@@ -104,14 +324,15 @@ struct QuizView: View {
                             .frame(width: 120, height: 120)
                             .foregroundStyle(Color.white)
                             .shadow(radius: 10)
+                            .scaleEffect(1.0)
                         Spacer()
                     }
+                    .allowsHitTesting(false)
+                    .transition(.scale.combined(with: .opacity))
                 }
-                .transition(.opacity)
-                .allowsHitTesting(false)
             }
-            // --- END FEEDBACK OVERLAY ---
-        }
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showFeedbackOverlay)
+        )
     }
     
     private func loadWordsForQuiz() {
@@ -133,15 +354,18 @@ struct QuizView: View {
         isCorrect = isAnswerCorrect
         if isAnswerCorrect {
             correctAnswers += 1
+            // Record streak on successful answer (or completion)
+            StudyHistoryManager.shared.recordStudySession()
         }
         // Update word mastery level
         word.updateMasteryLevel(correct: isAnswerCorrect)
         dataManager.save()
-        // Feedback overlay
+        
+        // Feedback overlay setup
         feedbackColor = isAnswerCorrect ? Theme.Colors.success : Theme.Colors.error
         feedbackIcon = isAnswerCorrect ? "checkmark.circle.fill" : "xmark.circle.fill"
-        // Only show overlay for correct answers
-        showFeedbackOverlay = isAnswerCorrect
+        showFeedbackOverlay = true
+        
         // Haptic feedback
         let generator = UINotificationFeedbackGenerator()
         if isAnswerCorrect {
@@ -149,34 +373,23 @@ struct QuizView: View {
         } else {
             generator.notificationOccurred(.error)
         }
-        // Show correct answer if wrong, then proceed
+        
+        // Proceed logic
+        let delay = isAnswerCorrect ? 0.7 : 1.2
         if !isAnswerCorrect {
             showingAnswer = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                withAnimation {
-                    showFeedbackOverlay = false
-                }
-                showingResult = false
-                showingAnswer = false
-                userAnswer = ""
-                currentWordIndex += 1
-                if currentWordIndex >= wordsDueForReview.count {
-                    quizCompleted = true
-                }
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            withAnimation {
+                showFeedbackOverlay = false
             }
-        } else {
-            // Hide overlay after short delay, then proceed
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
-                withAnimation {
-                    showFeedbackOverlay = false
-                }
-                showingResult = false
-                showingAnswer = false
-                userAnswer = ""
-                currentWordIndex += 1
-                if currentWordIndex >= wordsDueForReview.count {
-                    quizCompleted = true
-                }
+            showingResult = false
+            showingAnswer = false
+            userAnswer = ""
+            currentWordIndex += 1
+            if currentWordIndex >= wordsDueForReview.count {
+                quizCompleted = true
             }
         }
     }
@@ -193,7 +406,9 @@ struct QuizView: View {
     }
 }
 
-struct QuizQuestionCardView: View {
+// MARK: - Supporting Views
+
+private struct QuizQuestionCardView: View {
     let word: WordEntry
     let questionIndex: Int
     let totalQuestions: Int
@@ -281,7 +496,7 @@ struct QuizQuestionCardView: View {
                     if showingAnswer {
                         HStack(spacing: 8) {
                             Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(isCorrect ? Theme.Colors.success : Theme.Colors.error)
+                            .foregroundColor(isCorrect ? Theme.Colors.success : Theme.Colors.error)
                             Text(isCorrect ? "Correct!" : "Correct answer: \(word.translation ?? "")")
                                 .font(.system(.body, design: .rounded))
                                 .foregroundColor(isCorrect ? Theme.Colors.success : Theme.Colors.error)
@@ -315,7 +530,7 @@ struct QuizQuestionCardView: View {
     }
 }
 
-struct QuizResultView: View {
+private struct QuizResultView: View {
     let correctAnswers: Int
     let totalQuestions: Int
     let onDismiss: () -> Void
@@ -387,7 +602,7 @@ struct QuizResultView: View {
     }
 }
 
-struct NoWordsView: View {
+private struct NoWordsView: View {
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "checkmark.circle.fill")
@@ -409,4 +624,4 @@ struct NoWordsView: View {
 
 #Preview {
     QuizView()
-} 
+}
