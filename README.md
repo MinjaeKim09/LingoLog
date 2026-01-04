@@ -4,91 +4,73 @@ LingoLog is an iOS app designed for intermediate language learners who want to b
 
 ## Features
 
-### 🎯 Core Functionality
-- **Quick Word Input**: Add new vocabulary words you encounter throughout the day
-- **Context Tracking**: Remember where you heard/saw each word (e.g., "K-drama", "restaurant menu")
-- **Spaced Repetition**: Intelligent quiz scheduling based on your mastery level
-- **Progress Tracking**: Visual indicators showing your learning progress for each word
+### Core Functionality
+- **Quick Word Input**: Add new vocabulary words you encounter throughout the day.
+- **Context Tracking**: Remember where you heard/saw each word (e.g., "K-drama", "restaurant menu").
+- **Spaced Repetition**: Intelligent quiz scheduling based on your mastery level.
+- **Progress Tracking**: Visual indicators showing your learning progress for each word.
 
-### 📱 User Interface
-- **Dashboard**: Overview of your learning progress and quick access to main features
-- **Word Management**: Browse, search, and filter your vocabulary by language
-- **Interactive Quizzes**: Test your knowledge with context-aware questions
-- **Settings**: Export data, view statistics, and manage your learning journey
+### User Interface
+- **Dashboard**: Overview of your learning progress and quick access to main features.
+- **Word Management**: Browse, search, and filter your vocabulary by language.
+- **Interactive Quizzes**: Test your knowledge with context-aware questions.
+- **Settings**: Export data, view statistics, and manage your learning journey.
 
-### 🧠 Learning Algorithm
-- **5-Level Mastery System**: Words progress from 0 to 5 mastery levels
-- **Adaptive Scheduling**: Review intervals increase as you master words (1, 3, 7, 14, 30, 90 days)
-- **Smart Quizzing**: Only shows words that are due for review
+### Learning Algorithm
+- **5-Level Mastery System**: Words progress from 0 to 5 mastery levels.
+- **Adaptive Scheduling**: Review intervals increase as you master words (1, 3, 7, 14, 30, 90 days).
+- **Smart Quizzing**: Only shows words that are due for review.
 
 ## How It Works
 
 ### Adding Words
-1. Tap the "+" button or use the "Add Word" quick action
-2. Enter the word in the target language
-3. Provide the translation
-4. Select the language (Korean, Japanese, Chinese, Spanish, etc.)
-5. Optionally add context (where you heard/saw the word)
+1. Tap the "Add Word" button or use the quick action.
+2. Enter the word in the target language.
+3. Provide the translation.
+4. Select the language (Korean, Japanese, Chinese, Spanish, etc.).
+5. Optionally add context (where you heard/saw the word).
 
 ### Taking Quizzes
-1. The app automatically tracks which words are due for review
-2. Take quizzes to test your knowledge
-3. Correct answers increase mastery level, incorrect answers decrease it
-4. Words are considered "mastered" at level 5
+1. The app automatically tracks which words are due for review.
+2. Take quizzes to test your knowledge.
+3. Correct answers increase mastery level, incorrect answers decrease it.
+4. Words are considered "mastered" at level 5.
 
-### Progress Tracking
-- Visual mastery indicators (5 dots that fill as you progress)
-- Review count tracking
-- Language-specific statistics
-- Learning streak monitoring
+### Technical Details
 
-## Technical Details
+#### Architecture
+- **SwiftUI**: Modern declarative UI framework.
+- **Core Data**: Persistent storage for vocabulary and progress.
+- **MVVM Pattern**: Clean separation of concerns.
+- **Spaced Repetition Algorithm**: Based on proven learning science.
+- **Azure Translator**: Integrated for automated translations (requires API Key).
 
-### Architecture
-- **SwiftUI**: Modern declarative UI framework
-- **Core Data**: Persistent storage for vocabulary and progress
-- **MVVM Pattern**: Clean separation of concerns
-- **Spaced Repetition Algorithm**: Based on proven learning science
-
-### Data Model
+#### Data Model
 Each word entry includes:
-- Word and translation
-- Language and context
-- Date added and last reviewed
-- Mastery level (0-5) and review count
-- Next review date (calculated automatically)
+- Word and translation.
+- Language and context.
+- Date added and last reviewed.
+- Mastery level (0-5) and review count.
+- Next review date (calculated automatically).
 
 ## Getting Started
 
-1. Open the project in Xcode
-2. Build and run on an iOS device or simulator
-3. Start by adding your first word using the "Add Word" feature
-4. Take your first quiz to begin the learning process
+1. Clone the repository.
+2. Create `Secrets.plist` in the `LingoLog` directory.
+3. Add your Azure Translator API Key with the key `TranslatorAPIKey` to `Secrets.plist`.
+4. Open the project in Xcode.
+5. Build and run on an iOS device or simulator.
 
 ## Target Users
 
 LingoLog is perfect for:
-- **Intermediate language learners** who already have basic vocabulary
-- **People learning through immersion** (TV shows, conversations, reading)
-- **Busy learners** who want to capture vocabulary quickly throughout the day
-- **Self-directed learners** who prefer spaced repetition over traditional study methods
-
-## Future Enhancements
-
-Potential features for future versions:
-- Audio pronunciation support
-- Integration with language learning APIs
-- Cloud sync across devices
-- Advanced analytics and learning insights
-- Customizable review schedules
-- Social features for sharing progress
+- **Intermediate language learners** who already have basic vocabulary.
+- **People learning through immersion** (media, conversations, reading).
+- **Busy learners** who want to capture vocabulary quickly.
+- **Self-directed learners** who prefer spaced repetition.
 
 ## Privacy
 
-- All data is stored locally on your device
-- No personal data is shared with third parties
-- Export functionality allows you to backup your vocabulary
-
----
-
-Built with ❤️ for language learners everywhere 
+- All data is stored locally on your device.
+- No personal data is shared with third parties.
+- Export functionality allows you to backup your vocabulary.
