@@ -1,6 +1,6 @@
 import SwiftUI
 import Combine
-import Translation
+
 
 struct AddWordView: View {
     @Environment(\.dismiss) private var dismiss
@@ -14,22 +14,10 @@ struct AddWordView: View {
     @State private var isTranslating = false
     @State private var errorMessage: String? = nil
     @State private var debounceCancellable: AnyCancellable? = nil
-    @State private var translationConfiguration: TranslationSession.Configuration?
-    @State private var textToTranslate: String = ""
-    
-    private let languageOptions = [
-        (code: "en", name: "English"),
-        (code: "ko", name: "Korean"),
-        (code: "ja", name: "Japanese"),
-        (code: "zh", name: "Chinese"),
-        (code: "es", name: "Spanish"),
-        (code: "fr", name: "French"),
-        (code: "de", name: "German"),
-        (code: "it", name: "Italian"),
-        (code: "pt", name: "Portuguese"),
-        (code: "ru", name: "Russian"),
-        (code: "ar", name: "Arabic")
-    ]
+
+    @State private var showingSourcePicker = false
+    @State private var showingTargetPicker = false
+    @State private var allLanguages: [Language] = []
     
     var body: some View {
         ZStack {
@@ -74,16 +62,19 @@ struct AddWordView: View {
                                         .font(.caption)
                                         .foregroundColor(Theme.Colors.textSecondary)
                                     
-                                    Picker("Source", selection: $sourceLanguage) {
-                                        ForEach(languageOptions, id: \.code) { lang in
-                                            Text(lang.name).tag(lang.code)
+                                    Button(action: { showingSourcePicker = true }) {
+                                        HStack {
+                                            Text(getLanguageName(code: sourceLanguage))
+                                                .foregroundColor(Theme.Colors.textPrimary)
+                                            Spacer()
+                                            Image(systemName: "chevron.down")
+                                                .font(.caption)
+                                                .foregroundColor(Theme.Colors.textSecondary)
                                         }
+                                        .padding()
+                                        .background(Color.white.opacity(0.5))
+                                        .cornerRadius(8)
                                     }
-                                    .pickerStyle(.menu)
-                                    .accentColor(Theme.Colors.accent)
-                                    .padding(.horizontal, 8)
-                                    .background(Color.white.opacity(0.5))
-                                    .cornerRadius(8)
                                 }
                                 
                                 Spacer()
@@ -96,16 +87,19 @@ struct AddWordView: View {
                                         .font(.caption)
                                         .foregroundColor(Theme.Colors.textSecondary)
                                     
-                                    Picker("Target", selection: $targetLanguage) {
-                                        ForEach(languageOptions, id: \.code) { lang in
-                                            Text(lang.name).tag(lang.code)
+                                    Button(action: { showingTargetPicker = true }) {
+                                        HStack {
+                                            Text(getLanguageName(code: targetLanguage))
+                                                .foregroundColor(Theme.Colors.textPrimary)
+                                            Spacer()
+                                            Image(systemName: "chevron.down")
+                                                .font(.caption)
+                                                .foregroundColor(Theme.Colors.textSecondary)
                                         }
+                                        .padding()
+                                        .background(Color.white.opacity(0.5))
+                                        .cornerRadius(8)
                                     }
-                                    .pickerStyle(.menu)
-                                    .accentColor(Theme.Colors.accent)
-                                    .padding(.horizontal, 8)
-                                    .background(Color.white.opacity(0.5))
-                                    .cornerRadius(8)
                                 }
                             }
                         }
@@ -193,12 +187,49 @@ struct AddWordView: View {
                 }
             }
             .navigationViewStyle(.stack)
+            .sheet(isPresented: $showingSourcePicker) {
+                LanguagePickerView(selectedLanguage: $sourceLanguage, title: "Translate From")
+            }
+            .sheet(isPresented: $showingTargetPicker) {
+                LanguagePickerView(selectedLanguage: $targetLanguage, title: "Translate To")
+            }
+            .onChange(of: sourceLanguage) { _, _ in
+                if !inputText.isEmpty { translate(text: inputText) }
+            }
+            .onChange(of: targetLanguage) { _, _ in
+                if !inputText.isEmpty { translate(text: inputText) }
+            }
+            .task {
+                do {
+                    allLanguages = try await TranslationService.shared.fetchLanguages()
+                } catch {
+                    print("Failed to load languages: \(error)")
+                }
+            }
         }
-        .translationTask(translationConfiguration) { session in
+
+    }
+    
+    private func translate(text: String) {
+        guard !text.isEmpty else {
+            translation = nil
+            isTranslating = false
+            return
+        }
+        
+        isTranslating = true
+        errorMessage = nil
+        
+        
+        Task {
             do {
-                let response = try await session.translate(textToTranslate)
+                let result = try await TranslationService.shared.translate(
+                    text: text,
+                    from: sourceLanguage,
+                    to: targetLanguage
+                )
                 await MainActor.run {
-                    self.translation = response.targetText
+                    self.translation = result
                     self.isTranslating = false
                 }
             } catch {
@@ -211,27 +242,6 @@ struct AddWordView: View {
         }
     }
     
-    private func translate(text: String) {
-        guard !text.isEmpty else {
-            translation = nil
-            isTranslating = false
-            return
-        }
-        
-        isTranslating = true
-        errorMessage = nil
-        textToTranslate = text
-        
-        if translationConfiguration == nil {
-            translationConfiguration = TranslationSession.Configuration(
-                source: Locale.Language(identifier: sourceLanguage),
-                target: Locale.Language(identifier: targetLanguage)
-            )
-        } else {
-            translationConfiguration?.invalidate()
-        }
-    }
-    
     private func saveTranslation(translated: String) {
         dataManager.addWord(
             word: inputText,
@@ -240,6 +250,10 @@ struct AddWordView: View {
             context: context.isEmpty ? nil : context
         )
         dismiss()
+    }
+    
+    private func getLanguageName(code: String) -> String {
+        return allLanguages.first(where: { $0.code == code })?.name ?? code
     }
 }
 
