@@ -30,8 +30,10 @@ struct LanguageDetail: Codable {
 class TranslationService {
     static let shared = TranslationService()
     
+    // API Key loaded from Secrets.plist
+    private let apiKey: String
+    
     // TODO: In a production app, move these to a secure configuration
-    private let apiKey = "B6Kesdfa1GsB4iTamYUwi9jySHOi8pmekP3tj3Bf0t9hNU6rZPfIJQQJ99CAACYeBjFXJ3w3AAAbACOGzAFg"
     private let region = "eastus"
     private let endpoint = "https://api.cognitive.microsofttranslator.com/translate"
     private let languagesEndpoint = "https://api.cognitive.microsofttranslator.com/languages"
@@ -39,7 +41,16 @@ class TranslationService {
     // In-memory cache for languages
     private(set) var cachedLanguages: [Language] = []
     
-    private init() {}
+    private init() {
+        if let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
+           let dictionary = NSDictionary(contentsOfFile: path),
+           let key = dictionary["TranslatorAPIKey"] as? String {
+            self.apiKey = key
+        } else {
+            self.apiKey = ""
+            print("Error: Secrets.plist not found or TranslatorAPIKey missing. Please ensure Secrets.plist is added to the bundle.")
+        }
+    }
     
     func translate(text: String, from sourceLang: String, to targetLang: String) async throws -> String {
         guard let url = URL(string: "\(endpoint)?api-version=3.0&from=\(sourceLang)&to=\(targetLang)") else {
