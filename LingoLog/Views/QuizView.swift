@@ -53,7 +53,7 @@ private struct QuizHomeView: View {
     private var nextReviewDate: Date? {
         let allWords = dataManager.fetchWords()
         let unmastered = allWords.filter { !$0.isMastered && $0.nextReviewDate != nil }
-        return unmastered.min(by: { $0.nextReviewDate! < $1.nextReviewDate! })?.nextReviewDate
+        return unmastered.compactMap { $0.nextReviewDate }.min()
     }
     
     private var isReady: Bool {

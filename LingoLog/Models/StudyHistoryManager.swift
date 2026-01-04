@@ -63,12 +63,17 @@ class StudyHistoryManager {
         }
         
         // check previous days
-        var previousDay = calendar.date(byAdding: .day, value: -1, to: today)!
+        guard var previousDay = calendar.date(byAdding: .day, value: -1, to: today) else {
+            return streak
+        }
         while true {
             let dateString = dateFormatter.string(from: previousDay)
             if cachedDates.contains(dateString) {
                 streak += 1
-                previousDay = calendar.date(byAdding: .day, value: -1, to: previousDay)!
+                guard let nextDay = calendar.date(byAdding: .day, value: -1, to: previousDay) else {
+                    break
+                }
+                previousDay = nextDay
             } else {
                 break
             }
