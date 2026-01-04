@@ -9,6 +9,7 @@ struct Theme {
         static let secondaryAccent = Color(hex: "C6AD8F") // Antique Brass
         static let success = Color(hex: "4A7C59") // Muted Green
         static let error = Color(hex: "C4554D") // Muted Red
+        static let warning = Color(hex: "E2B33C") // Burnt Yellow
     }
     
     struct Typography {
