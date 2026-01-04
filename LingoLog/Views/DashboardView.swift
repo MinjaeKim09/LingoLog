@@ -2,8 +2,10 @@ import SwiftUI
 
 struct DashboardView: View {
     @ObservedObject var dataManager = DataManager.shared
+    @ObservedObject var userManager = UserManager.shared
     @State private var showingAddWord = false
     @State private var showingQuiz = false
+    @State private var showingOnboarding = false
     
     // Note: Removed logoGradient in favor of Theme colors
     
@@ -44,21 +46,19 @@ struct DashboardView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     // Welcome Section
+
                     VStack(spacing: 8) {
-                        Theme.Typography.display("Welcome to LingoLog")
-                            .foregroundStyle(Theme.Colors.textPrimary)
-                            .multilineTextAlignment(.center)
-                        
-                        Theme.Typography.body("Your personal language learning companion")
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                        
-                        HStack(spacing: 6) {
-                            Image(systemName: "bell.fill")
-                                .foregroundColor(Theme.Colors.accent)
-                            Text("Daily reminder at \(notificationTimeString)")
-                                .font(.caption)
-                                .foregroundColor(Theme.Colors.textSecondary)
+                        if !userManager.userName.isEmpty {
+                            Theme.Typography.display("Welcome, \(userManager.userName)")
+                                .foregroundStyle(Theme.Colors.textPrimary)
+                                .multilineTextAlignment(.center)
+                        } else {
+                            Theme.Typography.display("Welcome to LingoLog")
+                                .foregroundStyle(Theme.Colors.textPrimary)
+                                .multilineTextAlignment(.center)
                         }
+                        
+
                     }
                     .padding(.top)
                     
@@ -125,6 +125,14 @@ struct DashboardView: View {
             }
             .sheet(isPresented: $showingQuiz) {
                 QuizView()
+            }
+            .sheet(isPresented: $showingOnboarding) {
+                NameOnboardingView()
+            }
+        }
+        .onAppear {
+            if userManager.shouldShowOnboarding {
+                showingOnboarding = true
             }
         }
     }

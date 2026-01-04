@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var dataManager = DataManager.shared
+    @ObservedObject var userManager = UserManager.shared
     @State private var showingResetAlert = false
     @State private var showingExportSheet = false
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
@@ -24,6 +25,19 @@ struct SettingsView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
+                    
+                    // Profile Section
+                    SettingsSection(title: "Profile") {
+                        TextField("Your Name", text: $userManager.userName)
+                            .textFieldStyle(RoundedBorderTextFieldStyle()) // Simple style for now, or custom
+                            // Let's use a cleaner unstyled textfield with standard font
+                        
+                        if userManager.userName.isEmpty {
+                             Text("Enter your name to personalize your experience.")
+                                .font(.caption)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                        }
+                    }
                     
                     // Statistics Section
                     SettingsSection(title: "Statistics") {

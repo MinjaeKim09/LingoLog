@@ -90,24 +90,24 @@ struct QuizView: View {
             .edgesIgnoringSafeArea(.all)
             // --- FEEDBACK OVERLAY ---
             // Always render, animate opacity
-            Group {
-                feedbackColor
-                    .ignoresSafeArea()
-                    .opacity(showFeedbackOverlay ? 0.3 : 0.0)
-                    .animation(.easeInOut(duration: 0.18), value: showFeedbackOverlay)
-                VStack {
-                    Spacer()
-                    Image(systemName: feedbackIcon)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 120, height: 120)
-                        .foregroundStyle(Color.white)
-                        .shadow(radius: 10)
-                        .scaleEffect(showFeedbackOverlay ? 1.0 : 0.5)
-                        .opacity(showFeedbackOverlay ? 1.0 : 0.0)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showFeedbackOverlay)
-                    Spacer()
+            if showFeedbackOverlay {
+                Group {
+                    feedbackColor
+                        .ignoresSafeArea()
+                        .opacity(0.3)
+                    
+                    VStack {
+                        Spacer()
+                        Image(systemName: feedbackIcon)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120, height: 120)
+                            .foregroundStyle(Color.white)
+                            .shadow(radius: 10)
+                        Spacer()
+                    }
                 }
+                .transition(.opacity)
                 .allowsHitTesting(false)
             }
             // --- END FEEDBACK OVERLAY ---
@@ -203,7 +203,8 @@ struct QuizQuestionCardView: View {
     let onAnswerSubmitted: () -> Void
     
     var body: some View {
-        VStack(spacing: 0) {
+        ScrollView {
+            VStack(spacing: 0) {
             // Progress
             VStack(spacing: 8) {
                 ProgressView(value: Double(questionIndex), total: Double(max(totalQuestions, 1)))
@@ -307,6 +308,10 @@ struct QuizQuestionCardView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.clear)
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+        }
     }
 }
 
@@ -335,7 +340,8 @@ struct QuizResultView: View {
     }
     
     var body: some View {
-        VStack(spacing: 30) {
+        ScrollView {
+            VStack(spacing: 30) {
             Image(systemName: noWordsToRetake ? "checkmark.circle.fill" : (percentage >= 80 ? "star.fill" : "book.fill"))
                 .font(.system(size: 60))
                 .foregroundColor(noWordsToRetake ? Theme.Colors.success : (percentage >= 80 ? .yellow : Theme.Colors.secondaryAccent))
@@ -377,6 +383,7 @@ struct QuizResultView: View {
         .padding()
         .glassCard()
         .padding()
+        }
     }
 }
 
