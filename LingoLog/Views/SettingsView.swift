@@ -81,12 +81,18 @@ struct SettingsView: View {
                         
                         if notificationsEnabled {
                             Divider().background(Theme.Colors.divider)
-                            DatePicker(
-                                "Daily Reminder Time",
-                                selection: Binding(get: { notificationTime }, set: { setNotificationTime($0) }),
-                                displayedComponents: .hourAndMinute
-                            )
-                            .environment(\.colorScheme, .light) // Force light style for cleaner look if needed
+                            HStack {
+                                Theme.Typography.body("Daily Reminder Time")
+                                    .foregroundColor(Theme.Colors.textPrimary)
+                                Spacer()
+                                DatePicker(
+                                    "",
+                                    selection: Binding(get: { notificationTime }, set: { setNotificationTime($0) }),
+                                    displayedComponents: .hourAndMinute
+                                )
+                                .labelsHidden()
+                                .tint(Theme.Colors.accent)
+                            }
                         }
                     }
                     
