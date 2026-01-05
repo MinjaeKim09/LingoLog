@@ -5,7 +5,11 @@ import UIKit
 class UserManager: ObservableObject {
     static let shared = UserManager()
     
-    @Published var userName: String = ""
+    @Published var userName: String = "" {
+        didSet {
+            UserDefaults.standard.set(userName, forKey: userNameKey)
+        }
+    }
     @AppStorage("onboarding_do_not_ask_name") var doNotAskName: Bool = false
     
     private let userNameKey = "user_name"
