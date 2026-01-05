@@ -29,7 +29,7 @@ struct NameOnboardingView: View {
                 VStack(spacing: 8) {
                     TextField("Your Name", text: $nameInput)
                         .padding()
-                        .background(Color.white.opacity(0.1))
+                        .background(Theme.Colors.inputBackground)
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
@@ -55,7 +55,7 @@ struct NameOnboardingView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(nameInput.isEmpty ? Color.gray.opacity(0.5) : Theme.Colors.accent)
+                            .background(nameInput.isEmpty ? Theme.Colors.inactive : Theme.Colors.accent)
                             .cornerRadius(14)
                     }
                     .disabled(nameInput.isEmpty)

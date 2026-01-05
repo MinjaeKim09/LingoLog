@@ -48,14 +48,14 @@ struct AddWordView: View {
                             
                             TextField("Type or paste here", text: $inputText)
                                 .padding()
-                                .background(Color.white.opacity(0.5))
+                                .background(Theme.Colors.inputBackground)
                                 .cornerRadius(12)
                                 .font(.system(.body, design: .rounded))
                                 .autocapitalization(.none)
                                 .disableAutocorrection(true)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                                        .stroke(Theme.Colors.divider, lineWidth: 1)
                                 )
                                 .onChange(of: inputText) { _, newValue in
                                     debounceCancellable?.cancel()
@@ -90,7 +90,7 @@ struct AddWordView: View {
                                     }
                                     .padding()
                                     .frame(maxWidth: .infinity)
-                                    .background(Color.white.opacity(0.5))
+                                    .background(Theme.Colors.inputBackground)
                                     .cornerRadius(8)
                                 }
                             }
@@ -127,7 +127,7 @@ struct AddWordView: View {
                                     }
                                     .padding()
                                     .frame(maxWidth: .infinity)
-                                    .background(Color.white.opacity(0.5))
+                                    .background(Theme.Colors.inputBackground)
                                     .cornerRadius(8)
                                 }
                             }
@@ -194,13 +194,13 @@ struct AddWordView: View {
                             
                             TextField("Where did you see this? (e.g., K-drama)", text: $context)
                                 .padding()
-                                .background(Color.white.opacity(0.5))
+                                .background(Theme.Colors.inputBackground)
                                 .cornerRadius(12)
                                 .font(.system(.body, design: .rounded))
                                 .autocapitalization(.sentences)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                                        .stroke(Theme.Colors.divider, lineWidth: 1)
                                 )
                         }
                         .padding()

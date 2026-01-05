@@ -2,14 +2,84 @@ import SwiftUI
 
 struct Theme {
     struct Colors {
-        static let background = Color(hex: "F5F2EB") // Warm Paper
-        static let textPrimary = Color(hex: "2D2D2D") // Charcoal
-        static let textSecondary = Color(hex: "686868") // Soft Gray
-        static let accent = Color(hex: "2D5D4B") // Deep Emerald
-        static let secondaryAccent = Color(hex: "C6AD8F") // Antique Brass
-        static let success = Color(hex: "4A7C59") // Muted Green
-        static let error = Color(hex: "C4554D") // Muted Red
-        static let warning = Color(hex: "E2B33C") // Burnt Yellow
+        // Adaptive background: Warm Paper (light) / Deep Charcoal (dark)
+        static let background = Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "1C1C1E"))
+                : UIColor(Color(hex: "F5F2EB"))
+        })
+        
+        // Adaptive text: Charcoal (light) / Off-white (dark)
+        static let textPrimary = Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "F5F5F5"))
+                : UIColor(Color(hex: "2D2D2D"))
+        })
+        
+        // Adaptive secondary text: Soft Gray (light) / Light Gray (dark)
+        static let textSecondary = Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "A0A0A0"))
+                : UIColor(Color(hex: "686868"))
+        })
+        
+        // Accent colors - slightly brighter in dark mode for visibility
+        static let accent = Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "3D7D6B"))  // Brighter Emerald
+                : UIColor(Color(hex: "2D5D4B"))  // Deep Emerald
+        })
+        
+        static let secondaryAccent = Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "D4BC9F"))  // Lighter Brass
+                : UIColor(Color(hex: "C6AD8F"))  // Antique Brass
+        })
+        
+        static let success = Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "5A9C69"))  // Brighter Green
+                : UIColor(Color(hex: "4A7C59"))  // Muted Green
+        })
+        
+        static let error = Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "D4655D"))  // Brighter Red
+                : UIColor(Color(hex: "C4554D"))  // Muted Red
+        })
+        
+        static let warning = Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "F2C34C"))  // Brighter Yellow
+                : UIColor(Color(hex: "E2B33C"))  // Burnt Yellow
+        })
+        
+        // Additional colors for cards/surfaces in dark mode
+        static let cardBackground = Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "2C2C2E"))
+                : UIColor(Color(hex: "FFFFFF"))
+        })
+        
+        static let divider = Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "3A3A3C"))
+                : UIColor(Color(hex: "E5E5E5"))
+        })
+        
+        // Input field backgrounds - subtle in both modes
+        static let inputBackground = Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "3A3A3C"))
+                : UIColor(Color(hex: "FFFFFF")).withAlphaComponent(0.5)
+        })
+        
+        // Inactive/unfilled elements
+        static let inactive = Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: "48484A"))
+                : UIColor(Color(hex: "E5E5E5"))
+        })
     }
     
     struct Typography {
@@ -62,14 +132,16 @@ extension Color {
 
 // MARK: - View Modifiers
 struct GlassCardModifier: ViewModifier {
+    @Environment(\.colorScheme) var colorScheme
+    
     func body(content: Content) -> some View {
         content
             .background(.ultraThinMaterial)
             .cornerRadius(20)
-            .shadow(color: Color.black.opacity(0.05), radius: 15, x: 0, y: 5)
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.05), radius: 15, x: 0, y: 5)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.white.opacity(0.3), lineWidth: 1)
             )
     }
 }

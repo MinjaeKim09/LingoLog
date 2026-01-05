@@ -56,11 +56,11 @@ struct WordListView: View {
                             .foregroundStyle(Theme.Colors.textPrimary)
                     }
                     .padding()
-                    .background(Color.white.opacity(0.4))
+                    .background(Theme.Colors.inputBackground)
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            .stroke(Theme.Colors.divider, lineWidth: 1)
                     )
                     .padding(.horizontal)
                 }
@@ -138,7 +138,7 @@ struct WordRowView: View {
                     HStack(spacing: 4) {
                         ForEach(0..<5, id: \.self) { index in
                             Circle()
-                                .fill(index < Int(word.masteryLevel) ? Theme.Colors.success : Color.gray.opacity(0.3))
+                                .fill(index < Int(word.masteryLevel) ? Theme.Colors.success : Theme.Colors.inactive)
                                 .frame(width: 8, height: 8)
                         }
                     }
@@ -167,7 +167,7 @@ struct WordRowView: View {
             }
             
             Divider()
-                .background(Color.gray.opacity(0.2))
+                .background(Theme.Colors.divider)
             
             HStack {
                 if let dateAdded = word.dateAdded {
@@ -207,11 +207,11 @@ struct LanguageFilterButton: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(isSelected ? Theme.Colors.accent : Color.white.opacity(0.5))
+                .fill(isSelected ? Theme.Colors.accent : Theme.Colors.inputBackground)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(isSelected ? Theme.Colors.accent : Color.black.opacity(0.05), lineWidth: 1)
+                .stroke(isSelected ? Theme.Colors.accent : Theme.Colors.divider, lineWidth: 1)
         )
         .shadow(color: isSelected ? Theme.Colors.accent.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
     }

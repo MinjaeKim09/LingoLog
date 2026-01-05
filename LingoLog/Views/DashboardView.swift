@@ -225,7 +225,7 @@ struct RecentWordsSection: View {
                     HStack(spacing: 4) {
                         ForEach(0..<5, id: \.self) { index in
                             Circle()
-                                .fill(index < Int(word.masteryLevel) ? Theme.Colors.success : Color.gray.opacity(0.3))
+                                .fill(index < Int(word.masteryLevel) ? Theme.Colors.success : Theme.Colors.inactive)
                                 .frame(width: 6, height: 6)
                         }
                     }
