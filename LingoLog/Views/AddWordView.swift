@@ -70,10 +70,10 @@ struct AddWordView: View {
                         .glassCard()
                         
                         // Languages Section
-                        VStack(spacing: 16) {
+                        HStack(alignment: .bottom, spacing: 12) {
                             // Translate From
                             VStack(alignment: .leading, spacing: 8) {
-                                Theme.Typography.body("Translate From")
+                                Theme.Typography.body("From")
                                     .font(.caption)
                                     .foregroundColor(Theme.Colors.textSecondary)
                                 
@@ -81,22 +81,24 @@ struct AddWordView: View {
                                     HStack {
                                         Text(getLanguageName(code: sourceLanguage))
                                             .foregroundColor(Theme.Colors.textPrimary)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                            .multilineTextAlignment(.leading)
+                                            .lineLimit(1)
+                                            .truncationMode(.tail)
                                         Spacer()
                                         Image(systemName: "chevron.down")
                                             .font(.caption)
                                             .foregroundColor(Theme.Colors.textSecondary)
                                     }
                                     .padding()
+                                    .frame(maxWidth: .infinity)
                                     .background(Color.white.opacity(0.5))
                                     .cornerRadius(8)
                                 }
                             }
+                            .frame(maxWidth: .infinity)
                             
                             // Swap Button
                             Button(action: swapLanguages) {
-                                Image(systemName: "arrow.up.arrow.down")
+                                Image(systemName: "arrow.left.arrow.right")
                                     .foregroundColor(Theme.Colors.accent)
                                     .padding(8)
                                     .background(Theme.Colors.accent.opacity(0.1))
@@ -104,10 +106,11 @@ struct AddWordView: View {
                                     .rotationEffect(.degrees(isSwapped ? 180 : 0))
                                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSwapped)
                             }
+                            .padding(.bottom, 6)
                             
                             // Translate To
                             VStack(alignment: .leading, spacing: 8) {
-                                Theme.Typography.body("Translate To")
+                                Theme.Typography.body("To")
                                     .font(.caption)
                                     .foregroundColor(Theme.Colors.textSecondary)
                                 
@@ -115,18 +118,20 @@ struct AddWordView: View {
                                     HStack {
                                         Text(getLanguageName(code: targetLanguage))
                                             .foregroundColor(Theme.Colors.textPrimary)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                            .multilineTextAlignment(.leading)
+                                            .lineLimit(1)
+                                            .truncationMode(.tail)
                                         Spacer()
                                         Image(systemName: "chevron.down")
                                             .font(.caption)
                                             .foregroundColor(Theme.Colors.textSecondary)
                                     }
                                     .padding()
+                                    .frame(maxWidth: .infinity)
                                     .background(Color.white.opacity(0.5))
                                     .cornerRadius(8)
                                 }
                             }
+                            .frame(maxWidth: .infinity)
                         }
                         .padding()
                         .glassCard()
@@ -159,6 +164,10 @@ struct AddWordView: View {
                             }
                             .padding()
                             .glassCard()
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .move(edge: .top)),
+                                removal: .opacity
+                            ))
                         }
                         
                         if let error = errorMessage {
@@ -237,8 +246,10 @@ struct AddWordView: View {
     
     private func translate(text: String) {
         guard !text.isEmpty else {
-            translation = nil
-            isTranslating = false
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                translation = nil
+                isTranslating = false
+            }
             return
         }
         
@@ -254,14 +265,18 @@ struct AddWordView: View {
                     to: targetLanguage
                 )
                 await MainActor.run {
-                    self.translation = result
-                    self.isTranslating = false
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        self.translation = result
+                        self.isTranslating = false
+                    }
                 }
             } catch {
                 await MainActor.run {
-                    self.translation = nil
-                    self.errorMessage = "Translation failed: \(error.localizedDescription)"
-                    self.isTranslating = false
+                    withAnimation {
+                        self.translation = nil
+                        self.errorMessage = "Translation failed: \(error.localizedDescription)"
+                        self.isTranslating = false
+                    }
                 }
             }
         }
