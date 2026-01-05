@@ -137,7 +137,7 @@ struct AddWordView: View {
                         .glassCard()
                         
                         // Status & Result
-                        if isTranslating {
+                        if isTranslating && translation == nil {
                             HStack(spacing: 12) {
                                 ProgressView()
                                 Theme.Typography.body("Translating...")
@@ -150,8 +150,16 @@ struct AddWordView: View {
                         
                         if let translated = translation, !translated.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
-                                Theme.Typography.title("Translation")
-                                    .foregroundColor(Theme.Colors.textPrimary)
+                                HStack {
+                                    Theme.Typography.title("Translation")
+                                        .foregroundColor(Theme.Colors.textPrimary)
+                                    
+                                    if isTranslating {
+                                        Spacer()
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    }
+                                }
                                 
                                 Text(translated)
                                     .font(.system(.title3, design: .serif))
@@ -161,6 +169,7 @@ struct AddWordView: View {
                                     .padding()
                                     .background(Theme.Colors.accent.opacity(0.1))
                                     .cornerRadius(12)
+                                    .contentTransition(.opacity)
                             }
                             .padding()
                             .glassCard()
