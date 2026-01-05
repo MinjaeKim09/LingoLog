@@ -10,7 +10,7 @@ LingoLog is a high-fidelity iOS application designed for intermediate language l
 
 ---
 
-## Demo & Aesthetics
+## Demo
 
 <p align="center">
   <img src="docs/screenshots/dashboard.png" width="250" alt="Dashboard View"/>
@@ -72,4 +72,4 @@ Implementing a performant "Next Review Date" calculation directly within Core Da
 ---
 
 ## Contact
-**[Your Name]** - [Your LinkedIn] - [Your Website/Email]
+**Minjae Kim** - [LinkedIn](https://www.linkedin.com/in/minjae-kim09/) - [Email](mailto:kim.minjae@nyu.edu)
