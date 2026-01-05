@@ -1,76 +1,69 @@
-# LingoLog - Personal Language Learning Companion
+# LingoLog 🌿
+### *A Personal Language Learning Companion for the Immersion-Based Learner*
 
-LingoLog is an iOS app designed for intermediate language learners who want to build and maintain their vocabulary through daily practice and spaced repetition.
+![Language](https://img.shields.io/badge/Language-Swift-orange.svg)
+![Platform](https://img.shields.io/badge/Platform-iOS%2017%2B-blue.svg)
+![Framework](https://img.shields.io/badge/Framework-SwiftUI-red.svg)
+![Database](https://img.shields.io/badge/Database-CoreData-blue.svg)
 
-## Features
+LingoLog is a high-fidelity iOS application designed for intermediate language learners who prioritize immersion. Unlike flashcard apps that rely on pre-built decks, LingoLog empowers users to capture vocabulary from their daily lives—K-dramas, podcasts, or street signs—and master them using a scientifically-backed Spaced Repetition System (SRS).
 
-### Core Functionality
-- **Quick Word Input**: Add new vocabulary words you encounter throughout the day.
-- **Context Tracking**: Remember where you heard/saw each word (e.g., "K-drama", "restaurant menu").
-- **Spaced Repetition**: Intelligent quiz scheduling based on your mastery level.
-- **Progress Tracking**: Visual indicators showing your learning progress for each word.
+---
 
-### User Interface
-- **Dashboard**: Overview of your learning progress and quick access to main features.
-- **Word Management**: Browse, search, and filter your vocabulary by language.
-- **Interactive Quizzes**: Test your knowledge with context-aware questions.
-- **Settings**: Export data, view statistics, and manage your learning journey.
+## 📸 Demo & Aesthetics
 
-### Learning Algorithm
-- **5-Level Mastery System**: Words progress from 0 to 5 mastery levels.
-- **Adaptive Scheduling**: Review intervals increase as you master words (1, 3, 7, 14, 30, 90 days).
-- **Smart Quizzing**: Only shows words that are due for review.
+> [!TIP]
+> **Insert a 30-second screen recording or a hero screenshot carousel here.** 
+> Hiring managers love seeing the "Glassmorphism" UI in action.
 
-## How It Works
+---
 
-### Adding Words
-1. Tap the "Add Word" button or use the quick action.
-2. Enter the word in the target language.
-3. Provide the translation.
-4. Select the language (Korean, Japanese, Chinese, Spanish, etc.).
-5. Optionally add context (where you heard/saw the word).
+## ✨ Key Features
 
-### Taking Quizzes
-1. The app automatically tracks which words are due for review.
-2. Take quizzes to test your knowledge.
-3. Correct answers increase mastery level, incorrect answers decrease it.
-4. Words are considered "mastered" at level 5.
+### 🧠 Intelligent Spaced Repetition (SRS)
+- **Mastery Calibration**: A 5-level system that tracks your familiarity with each word.
+- **Dynamic Scheduling**: Review intervals expand as mastery increases (1, 3, 7, 14, 30 days), optimizing long-term retention.
+- **Smart Quizzing**: The app dynamically filters "Due for Review" words, ensuring you only study what you're about to forget.
 
-### Technical Details
+### 🌐 Context-Aware Learning
+- **Real-time Translation**: Integrated with **Azure AI Translator** for instant, accurate lookups.
+- **Context Tagging**: Users can record *where* they encountered a word (e.g., "In a restaurant menu in Seoul"), creating stronger mental associations.
 
-#### Architecture
-- **SwiftUI**: Modern declarative UI framework.
-- **Core Data**: Persistent storage for vocabulary and progress.
-- **MVVM Pattern**: Clean separation of concerns.
-- **Spaced Repetition Algorithm**: Based on proven learning science.
-- **Azure Translator**: Integrated for automated translations (requires API Key).
+### 💎 Premium User Experience
+- **Glassmorphism Design**: A custom design system built in SwiftUI using vibrant gradients, blurs, and micro-animations.
+- **Dynamic Dashboard**: At-a-glance stats on your study streak, word count, and upcoming reviews.
 
-#### Data Model
-Each word entry includes:
-- Word and translation.
-- Language and context.
-- Date added and last reviewed.
-- Mastery level (0-5) and review count.
-- Next review date (calculated automatically).
+---
 
-## Getting Started
+## 🛠 Technical Architecture
 
-1. Clone the repository.
-2. Create `Secrets.plist` in the `LingoLog` directory.
-3. Add your Azure Translator API Key with the key `TranslatorAPIKey` to `Secrets.plist`.
-4. Open the project in Xcode.
-5. Build and run on an iOS device or simulator.
+LingoLog is built with a focus on clean code and modern iOS best practices:
 
-## Target Users
+- **SwiftUI**: Utilizes a declarative UI approach with custom `ViewModifiers` for a consistent design system.
+- **Core Data**: Local-first persistence handling complex queries for SRS scheduling and distinctive language filtering.
+- **MVVM Architecture**: Ensures a clean separation between business logic, data management, and the view layer.
+- **Service-Oriented Design**: Encapsulated network logic for Azure AI services, featuring secure API key management and robust error handling.
 
-LingoLog is perfect for:
-- **Intermediate language learners** who already have basic vocabulary.
-- **People learning through immersion** (media, conversations, reading).
-- **Busy learners** who want to capture vocabulary quickly.
-- **Self-directed learners** who prefer spaced repetition.
+---
 
-## Privacy
+## 🚀 Challenges & Learnings
 
-- All data is stored locally on your device.
-- No personal data is shared with third parties.
-- Export functionality allows you to backup your vocabulary.
+### 1. Complex State in SwiftUI
+Handling real-time translation feedback while ensuring the UI remained responsive required deep dives into `@StateObject` and `@Published` patterns, specifically when managing the lifecycle of the `TranslationService`.
+
+### 2. Spaced Repetition Logic in Core Data
+Implementing a performant "Next Review Date" calculation directly within Core Data predicates allowed the app to remain snappy even as the vocabulary list grows into the thousands.
+
+---
+
+## ⚙️ Getting Started
+
+1.  Clone the repository.
+2.  Add your Azure Translator API Key to `Secrets.plist`.
+3.  Open `LingoLog.xcodeproj` in Xcode 15+.
+4.  Build and Run.
+
+---
+
+## 📬 Contact
+**[Your Name]** - [Your LinkedIn] - [Your Website/Email]
