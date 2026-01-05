@@ -278,7 +278,7 @@ private struct QuizSessionView: View {
                         onRetake: retakeQuiz,
                         noWordsToRetake: noWordsToRetake
                     )
-                    .transition(.opacity)
+                    .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .opacity))
                 } else if let word = currentWord {
                     QuizQuestionCardView(
                         word: word,
@@ -409,12 +409,14 @@ private struct QuizSessionView: View {
     }
     
     private func moveToNextWord() {
-        showingResult = false
-        showingAnswer = false
-        userAnswer = ""
-        currentWordIndex += 1
-        if currentWordIndex >= wordsDueForReview.count {
-            quizCompleted = true
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showingResult = false
+            showingAnswer = false
+            userAnswer = ""
+            currentWordIndex += 1
+            if currentWordIndex >= wordsDueForReview.count {
+                quizCompleted = true
+            }
         }
     }
     
@@ -443,6 +445,12 @@ private struct QuizQuestionCardView: View {
     let onNext: () -> Void
     let onEdit: () -> Void
     
+    // Check if the current user input matches the correct answer
+    private var isCorrectionMatch: Bool {
+        guard let translation = word.translation else { return false }
+        return userAnswer.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == translation.lowercased()
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
@@ -466,10 +474,13 @@ private struct QuizQuestionCardView: View {
                 }
                 .padding(.horizontal)
             }
-            Spacer(minLength: 0)
+            
+            // Consistent gap between header and card
+            Spacer().frame(height: 16)
+            
             // Card
-            VStack(spacing: 24) {
-                VStack(spacing: 8) {
+            VStack(spacing: 16) {
+                VStack(spacing: 4) {
                     Theme.Typography.body("Translate this word:")
                         .font(.headline)
                         .foregroundColor(Theme.Colors.textSecondary)
@@ -495,10 +506,10 @@ private struct QuizQuestionCardView: View {
                         .foregroundColor(Theme.Colors.secondaryAccent)
                         .cornerRadius(12)
                 }
-                .padding(.top, 16)
+                .padding(.top, 0) // Moved up
                 
                 // Answer
-                VStack(spacing: 16) {
+                VStack(spacing: 12) {
                     TextField("Type your answer", text: $userAnswer)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
@@ -510,33 +521,76 @@ private struct QuizQuestionCardView: View {
                         .foregroundColor(Theme.Colors.textPrimary)
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .stroke(Theme.Colors.accent.opacity(0.3), lineWidth: 1)
+                                .stroke(
+                                    showingAnswer && !isCorrect ? (isCorrectionMatch ? Theme.Colors.success : Theme.Colors.error.opacity(0.5)) : Theme.Colors.accent.opacity(0.3),
+                                    lineWidth: showingAnswer && !isCorrect ? 2 : 1
+                                )
                         )
-                        .disabled(showingAnswer)
+                        .animation(.easeInOut, value: isCorrectionMatch)
+                        // Disable interaction ONLY if showing answer AND it was correct.
+                        // If showing answer but WRONG (correction mode), leave enabled.
+                        .disabled(showingAnswer && isCorrect)
                         .onSubmit {
                             if !userAnswer.isEmpty {
-                                onAnswerSubmitted()
+                                if !showingAnswer {
+                                    // Initial submission
+                                    onAnswerSubmitted()
+                                } else if isCorrectionMatch {
+                                    // In correction mode and nailed it
+                                    // Add delay so user sees green state
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                                        onNext()
+                                    }
+                                }
                             }
                         }
                     
                     if showingAnswer {
-                        HStack(spacing: 8) {
-                            Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundColor(isCorrect ? Theme.Colors.success : Theme.Colors.error)
-                            Text(isCorrect ? "Correct!" : "Correct answer: \(word.translation ?? "")")
-                                .font(.system(.body, design: .rounded))
-                                .foregroundColor(isCorrect ? Theme.Colors.success : Theme.Colors.error)
-                                .fontWeight(.semibold)
-                                .fontWeight(.semibold)
+                        VStack(spacing: 8) {
+                            HStack(spacing: 8) {
+                                Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                    .foregroundColor(isCorrect ? Theme.Colors.success : Theme.Colors.error)
+                                
+                                if isCorrect {
+                                    Text("Correct!")
+                                        .font(.system(.body, design: .rounded))
+                                        .foregroundColor(Theme.Colors.success)
+                                        .fontWeight(.semibold)
+                                } else {
+                                    Text("Type the correct answer:")
+                                        .font(.system(.body, design: .rounded))
+                                        .foregroundColor(Theme.Colors.error)
+                                        .fontWeight(.semibold)
+                                }
+                            }
+                            
+                            if !isCorrect {
+                                Text(word.translation ?? "")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(Theme.Colors.textPrimary)
+                                    .padding(.vertical, 4)
+                            }
                         }
                         
                         if isCorrect {
-                            // Standard flow for correct answer (will auto-advance, maybe show a "Next" if we wanted, but auto is fine)
-                            // Or if we want to be explicit:
-                            // Text("Great job!")
                         } else {
-                            // Incorrect flow options
+                            // Incorrect flow options with enforced correction
                              VStack(spacing: 12) {
+                                
+                                Button(action: {
+                                   DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                        onNext()
+                                   }
+                                }) {
+                                    Text("Continue")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .primaryButtonStyle()
+                                .disabled(!isCorrectionMatch) // Enforce matching answer
+                                .opacity(isCorrectionMatch ? 1.0 : 0.5)
+                                .animation(.easeInOut, value: isCorrectionMatch)
+                                 
                                 Button(action: onEdit) {
                                     HStack {
                                         Image(systemName: "pencil")
@@ -544,16 +598,12 @@ private struct QuizQuestionCardView: View {
                                     }
                                     .frame(maxWidth: .infinity)
                                 }
-                                .padding()
-                                .background(Theme.Colors.secondaryAccent.opacity(0.1))
+                                .padding() // match standard button padding
                                 .foregroundColor(Theme.Colors.secondaryAccent)
-                                .cornerRadius(12)
-                                
-                                Button(action: onNext) {
-                                    Text("Continue")
-                                        .frame(maxWidth: .infinity)
-                                }
-                                .primaryButtonStyle()
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Theme.Colors.secondaryAccent.opacity(0.3), lineWidth: 1)
+                                )
                             }
                         }
                     } else {
@@ -571,10 +621,12 @@ private struct QuizQuestionCardView: View {
                     }
                 }
             }
-            .padding(32)
+            .padding(24) // Reduced padding from 32
             .glassCard()
             .padding(.horizontal, 24)
-            Spacer(minLength: 0)
+            
+            // Add extra space at the bottom for keyboard
+            Spacer(minLength: 300) 
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.clear)
