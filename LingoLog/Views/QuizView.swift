@@ -219,7 +219,7 @@ private struct StreakCalendarView: View {
                     
                     ZStack {
                         Circle()
-                            .fill(hasStudied ? Theme.Colors.success : (isToday ? Theme.Colors.accent.opacity(0.1) : Color.gray.opacity(0.1)))
+                            .fill(hasStudied ? Theme.Colors.success : (isToday ? Theme.Colors.accent.opacity(0.1) : Theme.Colors.inactive.opacity(0.5)))
                             .frame(width: 30, height: 30)
                         
                         // If it's today and not studied yet, show outline
@@ -467,7 +467,7 @@ private struct QuizQuestionCardView: View {
                     HStack(spacing: 4) {
                         ForEach(0..<5, id: \.self) { index in
                             Circle()
-                                .fill(index < Int(word.masteryLevel) ? Theme.Colors.success : Color.gray.opacity(0.3))
+                                .fill(index < Int(word.masteryLevel) ? Theme.Colors.success : Theme.Colors.inactive)
                                 .frame(width: 8, height: 8)
                         }
                     }
@@ -515,7 +515,7 @@ private struct QuizQuestionCardView: View {
                         .disableAutocorrection(true)
                         .submitLabel(.done)
                         .padding(16)
-                        .background(Color.white.opacity(0.5))
+                        .background(Theme.Colors.inputBackground)
                         .cornerRadius(16)
                         .font(.system(.title3, design: .rounded))
                         .foregroundColor(Theme.Colors.textPrimary)

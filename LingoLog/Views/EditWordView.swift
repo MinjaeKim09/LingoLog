@@ -22,12 +22,12 @@ struct EditWordView: View {
                             
                             TextField("Word", text: $editedWord)
                                 .padding()
-                                .background(Color.white.opacity(0.5))
+                                .background(Theme.Colors.inputBackground)
                                 .cornerRadius(12)
                                 .font(.system(.body, design: .rounded))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                                        .stroke(Theme.Colors.divider, lineWidth: 1)
                                 )
                         }
                         .padding()
@@ -40,12 +40,12 @@ struct EditWordView: View {
                             
                             TextField("Translation", text: $editedTranslation)
                                 .padding()
-                                .background(Color.white.opacity(0.5))
+                                .background(Theme.Colors.inputBackground)
                                 .cornerRadius(12)
                                 .font(.system(.body, design: .rounded))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                                        .stroke(Theme.Colors.divider, lineWidth: 1)
                                 )
                         }
                         .padding()
@@ -58,12 +58,12 @@ struct EditWordView: View {
                             
                             TextField("Context (Optional)", text: $editedContext)
                                 .padding()
-                                .background(Color.white.opacity(0.5))
+                                .background(Theme.Colors.inputBackground)
                                 .cornerRadius(12)
                                 .font(.system(.body, design: .rounded))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                                        .stroke(Theme.Colors.divider, lineWidth: 1)
                                 )
                         }
                         .padding()

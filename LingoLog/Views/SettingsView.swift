@@ -43,9 +43,9 @@ struct SettingsView: View {
                     SettingsSection(title: "Statistics") {
                         VStack(spacing: 8) {
                             StatisticsRow(title: "Total Words", value: "\(dataManager.fetchWords().count)")
-                            Divider().background(Color.gray.opacity(0.1))
+                            Divider().background(Theme.Colors.divider)
                             StatisticsRow(title: "Mastered Words", value: "\(dataManager.fetchWords().filter { $0.isMastered }.count)")
-                            Divider().background(Color.gray.opacity(0.1))
+                            Divider().background(Theme.Colors.divider)
                             StatisticsRow(title: "Words Due for Review", value: "\(dataManager.fetchWordsDueForReview().count)")
                         }
                     }
@@ -63,7 +63,7 @@ struct SettingsView: View {
                             }
                             // Don't add divider for the last item - simplified for now
                             if language != dataManager.getAvailableLanguages().last {
-                                Divider().background(Color.gray.opacity(0.1))
+                                Divider().background(Theme.Colors.divider)
                             }
                         }
                     }
@@ -80,13 +80,19 @@ struct SettingsView: View {
                         }
                         
                         if notificationsEnabled {
-                            Divider().background(Color.gray.opacity(0.1))
-                            DatePicker(
-                                "Daily Reminder Time",
-                                selection: Binding(get: { notificationTime }, set: { setNotificationTime($0) }),
-                                displayedComponents: .hourAndMinute
-                            )
-                            .environment(\.colorScheme, .light) // Force light style for cleaner look if needed
+                            Divider().background(Theme.Colors.divider)
+                            HStack {
+                                Theme.Typography.body("Daily Reminder Time")
+                                    .foregroundColor(Theme.Colors.textPrimary)
+                                Spacer()
+                                DatePicker(
+                                    "",
+                                    selection: Binding(get: { notificationTime }, set: { setNotificationTime($0) }),
+                                    displayedComponents: .hourAndMinute
+                                )
+                                .labelsHidden()
+                                .tint(Theme.Colors.accent)
+                            }
                         }
                     }
                     
@@ -100,7 +106,7 @@ struct SettingsView: View {
                             .foregroundColor(Theme.Colors.accent)
                         }
                         
-                        Divider().background(Color.gray.opacity(0.1))
+                        Divider().background(Theme.Colors.divider)
                         
                         Button(action: { showingResetAlert = true }) {
                             HStack {
