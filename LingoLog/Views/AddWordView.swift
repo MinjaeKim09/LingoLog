@@ -19,6 +19,21 @@ struct AddWordView: View {
     @State private var showingTargetPicker = false
     @State private var allLanguages: [Language] = []
     
+    // Add state for animation
+    @State private var isSwapped = false
+    
+    private func swapLanguages() {
+        let temp = sourceLanguage
+        sourceLanguage = targetLanguage
+        targetLanguage = temp
+        isSwapped.toggle()
+        
+        // Trigger translation with new direction if there is input
+        if !inputText.isEmpty {
+            translate(text: inputText)
+        }
+    }
+    
     var body: some View {
         ZStack {
             Theme.Colors.background.ignoresSafeArea()
@@ -56,50 +71,60 @@ struct AddWordView: View {
                         
                         // Languages Section
                         VStack(spacing: 16) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Theme.Typography.body("Translate From")
-                                        .font(.caption)
-                                        .foregroundColor(Theme.Colors.textSecondary)
-                                    
-                                    Button(action: { showingSourcePicker = true }) {
-                                        HStack {
-                                            Text(getLanguageName(code: sourceLanguage))
-                                                .foregroundColor(Theme.Colors.textPrimary)
-                                            Spacer()
-                                            Image(systemName: "chevron.down")
-                                                .font(.caption)
-                                                .foregroundColor(Theme.Colors.textSecondary)
-                                        }
-                                        .padding()
-                                        .background(Color.white.opacity(0.5))
-                                        .cornerRadius(8)
-                                    }
-                                }
-                                
-                                Spacer()
-                                Image(systemName: "arrow.right")
+                            // Translate From
+                            VStack(alignment: .leading, spacing: 8) {
+                                Theme.Typography.body("Translate From")
+                                    .font(.caption)
                                     .foregroundColor(Theme.Colors.textSecondary)
-                                Spacer()
                                 
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Theme.Typography.body("Translate To")
-                                        .font(.caption)
-                                        .foregroundColor(Theme.Colors.textSecondary)
-                                    
-                                    Button(action: { showingTargetPicker = true }) {
-                                        HStack {
-                                            Text(getLanguageName(code: targetLanguage))
-                                                .foregroundColor(Theme.Colors.textPrimary)
-                                            Spacer()
-                                            Image(systemName: "chevron.down")
-                                                .font(.caption)
-                                                .foregroundColor(Theme.Colors.textSecondary)
-                                        }
-                                        .padding()
-                                        .background(Color.white.opacity(0.5))
-                                        .cornerRadius(8)
+                                Button(action: { showingSourcePicker = true }) {
+                                    HStack {
+                                        Text(getLanguageName(code: sourceLanguage))
+                                            .foregroundColor(Theme.Colors.textPrimary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                            .multilineTextAlignment(.leading)
+                                        Spacer()
+                                        Image(systemName: "chevron.down")
+                                            .font(.caption)
+                                            .foregroundColor(Theme.Colors.textSecondary)
                                     }
+                                    .padding()
+                                    .background(Color.white.opacity(0.5))
+                                    .cornerRadius(8)
+                                }
+                            }
+                            
+                            // Swap Button
+                            Button(action: swapLanguages) {
+                                Image(systemName: "arrow.up.arrow.down")
+                                    .foregroundColor(Theme.Colors.accent)
+                                    .padding(8)
+                                    .background(Theme.Colors.accent.opacity(0.1))
+                                    .clipShape(Circle())
+                                    .rotationEffect(.degrees(isSwapped ? 180 : 0))
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSwapped)
+                            }
+                            
+                            // Translate To
+                            VStack(alignment: .leading, spacing: 8) {
+                                Theme.Typography.body("Translate To")
+                                    .font(.caption)
+                                    .foregroundColor(Theme.Colors.textSecondary)
+                                
+                                Button(action: { showingTargetPicker = true }) {
+                                    HStack {
+                                        Text(getLanguageName(code: targetLanguage))
+                                            .foregroundColor(Theme.Colors.textPrimary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                            .multilineTextAlignment(.leading)
+                                        Spacer()
+                                        Image(systemName: "chevron.down")
+                                            .font(.caption)
+                                            .foregroundColor(Theme.Colors.textSecondary)
+                                    }
+                                    .padding()
+                                    .background(Color.white.opacity(0.5))
+                                    .cornerRadius(8)
                                 }
                             }
                         }
