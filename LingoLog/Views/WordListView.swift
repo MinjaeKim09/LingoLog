@@ -213,7 +213,7 @@ struct LanguageFilterButton: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(isSelected ? Theme.Colors.accent : Theme.Colors.divider, lineWidth: 1)
         )
-        .shadow(color: isSelected ? Theme.Colors.accent.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
+        .shadow(color: isSelected ? Color.black.opacity(0.15) : Color.clear, radius: 4, x: 0, y: 2)
     }
 }
 

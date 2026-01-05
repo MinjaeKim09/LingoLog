@@ -12,9 +12,15 @@ LingoLog is a high-fidelity iOS application designed for intermediate language l
 
 ## 📸 Demo & Aesthetics
 
-> [!TIP]
-> **Insert a 30-second screen recording or a hero screenshot carousel here.** 
-> Hiring managers love seeing the "Glassmorphism" UI in action.
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" width="250" alt="Dashboard View"/>
+  <img src="docs/screenshots/add-word.png" width="250" alt="Add Word View"/>
+  <img src="docs/screenshots/word-list.png" width="250" alt="Word List View"/>
+</p>
+
+| Dashboard | Add Word | Word List |
+|:---------:|:--------:|:---------:|
+| At-a-glance stats on your study streak and upcoming reviews | Real-time translation powered by Azure AI | Browse and manage your vocabulary collection |
 
 ---
 
