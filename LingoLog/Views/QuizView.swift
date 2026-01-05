@@ -258,6 +258,10 @@ private struct QuizSessionView: View {
     @State private var feedbackColor: Color = .clear
     @State private var feedbackIcon: String = ""
     
+    // Edit Flow
+    @State private var wordToEdit: WordEntry?
+    @State private var showingEditSheet = false
+    
     var currentWord: WordEntry? {
         guard currentWordIndex < wordsDueForReview.count else { return nil }
         return wordsDueForReview[currentWordIndex]
@@ -283,7 +287,13 @@ private struct QuizSessionView: View {
                         showingAnswer: $showingAnswer,
                         userAnswer: $userAnswer,
                         isCorrect: $isCorrect,
-                        onAnswerSubmitted: { handleAnswerWithFeedback() }
+                        onAnswerSubmitted: { handleAnswerWithFeedback() },
+                        onNext: { moveToNextWord() },
+                        onEdit: {
+                            if let word = currentWord {
+                                wordToEdit = word
+                            }
+                        }
                     )
                     .matchedGeometryEffect(id: "card", in: animation)
                     .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
@@ -304,6 +314,9 @@ private struct QuizSessionView: View {
             }
             .onAppear {
                 loadWordsForQuiz()
+            }
+            .sheet(item: $wordToEdit) { word in
+                EditWordView(word: word)
             }
         }
         .navigationViewStyle(.stack)
@@ -374,23 +387,34 @@ private struct QuizSessionView: View {
             generator.notificationOccurred(.error)
         }
         
-        // Proceed logic
-        let delay = isAnswerCorrect ? 0.7 : 1.2
-        if !isAnswerCorrect {
-            showingAnswer = true
-        }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            withAnimation {
-                showFeedbackOverlay = false
+        // Proceed logic
+        // If correct, auto-advance. If incorrect, stop and wait for user action.
+        if isAnswerCorrect {
+             DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                 withAnimation {
+                     showFeedbackOverlay = false
+                 }
+                 moveToNextWord()
+             }
+        } else {
+            showingAnswer = true
+            // Feedback overlay hides faster so user can see options
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                withAnimation {
+                    showFeedbackOverlay = false
+                }
             }
-            showingResult = false
-            showingAnswer = false
-            userAnswer = ""
-            currentWordIndex += 1
-            if currentWordIndex >= wordsDueForReview.count {
-                quizCompleted = true
-            }
+        }
+    }
+    
+    private func moveToNextWord() {
+        showingResult = false
+        showingAnswer = false
+        userAnswer = ""
+        currentWordIndex += 1
+        if currentWordIndex >= wordsDueForReview.count {
+            quizCompleted = true
         }
     }
     
@@ -416,6 +440,8 @@ private struct QuizQuestionCardView: View {
     @Binding var userAnswer: String
     @Binding var isCorrect: Bool
     let onAnswerSubmitted: () -> Void
+    let onNext: () -> Void
+    let onEdit: () -> Void
     
     var body: some View {
         ScrollView {
@@ -501,19 +527,48 @@ private struct QuizQuestionCardView: View {
                                 .font(.system(.body, design: .rounded))
                                 .foregroundColor(isCorrect ? Theme.Colors.success : Theme.Colors.error)
                                 .fontWeight(.semibold)
+                                .fontWeight(.semibold)
                         }
-                    }
-                    
-                    Button(action: {
-                        if !userAnswer.isEmpty {
-                            onAnswerSubmitted()
+                        
+                        if isCorrect {
+                            // Standard flow for correct answer (will auto-advance, maybe show a "Next" if we wanted, but auto is fine)
+                            // Or if we want to be explicit:
+                            // Text("Great job!")
+                        } else {
+                            // Incorrect flow options
+                             VStack(spacing: 12) {
+                                Button(action: onEdit) {
+                                    HStack {
+                                        Image(systemName: "pencil")
+                                        Text("Edit Word")
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                }
+                                .padding()
+                                .background(Theme.Colors.secondaryAccent.opacity(0.1))
+                                .foregroundColor(Theme.Colors.secondaryAccent)
+                                .cornerRadius(12)
+                                
+                                Button(action: onNext) {
+                                    Text("Continue")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .primaryButtonStyle()
+                            }
                         }
-                    }) {
-                        Text("Submit")
+                    } else {
+                        // Only show Submit when not showing answer
+                        Button(action: {
+                            if !userAnswer.isEmpty {
+                                onAnswerSubmitted()
+                            }
+                        }) {
+                            Text("Submit")
+                        }
+                        .primaryButtonStyle()
+                        .disabled(userAnswer.isEmpty)
+                        .opacity(userAnswer.isEmpty ? 0.6 : 1.0)
                     }
-                    .primaryButtonStyle()
-                    .disabled(userAnswer.isEmpty)
-                    .opacity(userAnswer.isEmpty ? 0.6 : 1.0)
                 }
             }
             .padding(32)
