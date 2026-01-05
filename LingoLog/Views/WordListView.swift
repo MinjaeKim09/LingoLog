@@ -5,6 +5,7 @@ struct WordListView: View {
     @State private var selectedLanguage: String = "All"
     @State private var showingAddWord = false
     @State private var searchText = ""
+    @State private var wordToEdit: WordEntry?
     
     // Note: Removed logoGradient in favor of Theme colors
     
@@ -67,21 +68,28 @@ struct WordListView: View {
                 .background(Theme.Colors.background.opacity(0.5)) // Slight separation for header
                 
                 // Word List
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(filteredWords, id: \.id) { word in
-                            WordRowView(word: word)
-                                .contextMenu {
-                                    Button(role: .destructive) {
-                                        dataManager.deleteWord(word)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
+                List {
+                    ForEach(filteredWords, id: \.id) { word in
+                        WordRowView(word: word)
+                            .padding(.vertical, 8)
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .contentShape(Rectangle()) // Make the whole row tappable
+                            .onTapGesture {
+                                wordToEdit = word
+                            }
+                    }
+                    .onDelete { indexSet in
+                        for index in indexSet {
+                            if index < filteredWords.count {
+                                let wordToDelete = filteredWords[index]
+                                dataManager.deleteWord(wordToDelete)
+                            }
                         }
                     }
-                    .padding()
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
             .background(Color.clear)
             .navigationTitle("")
@@ -102,12 +110,15 @@ struct WordListView: View {
             .sheet(isPresented: $showingAddWord) {
                 AddWordView()
             }
+            .sheet(item: $wordToEdit) { word in
+                EditWordView(word: word)
+            }
         }
     }
 }
 
 struct WordRowView: View {
-    let word: WordEntry
+    @ObservedObject var word: WordEntry
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {

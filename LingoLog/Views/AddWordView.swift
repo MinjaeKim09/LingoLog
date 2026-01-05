@@ -208,6 +208,7 @@ struct AddWordView: View {
                     }
                     .padding()
                 }
+
                 .navigationTitle("Add New Word")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -248,6 +249,9 @@ struct AddWordView: View {
                 } catch {
                     print("Failed to load languages: \(error)")
                 }
+            }
+            .onAppear {
+                // Reset fields or setup if needed
             }
         }
 
