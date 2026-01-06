@@ -1,6 +1,7 @@
 # LingoLog
 ### *A Personal Language Learning Companion for the Immersion-Based Learner*
 
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![Language](https://img.shields.io/badge/Language-Swift-orange.svg)
 ![Platform](https://img.shields.io/badge/Platform-iOS%2017%2B-blue.svg)
 ![Framework](https://img.shields.io/badge/Framework-SwiftUI-red.svg)
@@ -64,10 +65,36 @@ Implementing a performant "Next Review Date" calculation directly within Core Da
 
 ## Getting Started
 
-1.  Clone the repository.
-2.  Add your Azure Translator API Key to `Secrets.plist`.
-3.  Open `LingoLog.xcodeproj` in Xcode 15+.
-4.  Build and Run.
+### Prerequisites
+- **Xcode 15+** (with iOS 17+ SDK)
+- **Azure Translator API Key** ([Get one here](https://azure.microsoft.com/en-us/products/ai-services/ai-translator))
+
+### Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/MinjaeKim09/LingoLog.git
+   cd LingoLog
+   ```
+
+2. **Configure your API key:**
+   - Copy the example secrets file:
+     ```bash
+     cp LingoLog/Secrets.plist.example LingoLog/Secrets.plist
+     ```
+   - Open `LingoLog/Secrets.plist` and replace `YOUR_AZURE_TRANSLATOR_API_KEY_HERE` with your actual Azure Translator API key.
+   - **Note:** `Secrets.plist` is in `.gitignore` and will not be committed to version control.
+
+3. **Open and run:**
+   - Open `LingoLog.xcodeproj` in Xcode.
+   - Select your target device or simulator.
+   - Build and Run (⌘R).
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
