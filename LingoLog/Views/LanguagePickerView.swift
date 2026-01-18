@@ -4,11 +4,9 @@ struct LanguagePickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedLanguage: String
     let title: String
+    let languages: [Language]
     
-    @State private var languages: [Language] = []
     @State private var searchText = ""
-    @State private var isLoading = false
-    @State private var errorMessage: String?
     
     var filteredLanguages: [Language] {
         if searchText.isEmpty {
@@ -26,20 +24,8 @@ struct LanguagePickerView: View {
             ZStack {
                 Theme.Colors.background.ignoresSafeArea()
                 
-                if isLoading {
+                if languages.isEmpty {
                     ProgressView("Loading languages...")
-                } else if let error = errorMessage {
-                    VStack {
-                        Text("Error loading languages")
-                            .font(.headline)
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                        Button("Retry") {
-                            loadLanguages()
-                        }
-                        .padding()
-                    }
                 } else {
                     List {
                         ForEach(filteredLanguages) { language in
@@ -75,31 +61,6 @@ struct LanguagePickerView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { dismiss() }
-                }
-            }
-            .task {
-                loadLanguages()
-            }
-        }
-    }
-    
-    private func loadLanguages() {
-        guard languages.isEmpty else { return }
-        
-        isLoading = true
-        errorMessage = nil
-        
-        Task {
-            do {
-                let fetchedLanguages = try await TranslationService.shared.fetchLanguages()
-                await MainActor.run {
-                    self.languages = fetchedLanguages
-                    self.isLoading = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.errorMessage = error.localizedDescription
-                    self.isLoading = false
                 }
             }
         }

@@ -45,4 +45,24 @@ class NotificationManager {
             }
         }
     }
+    
+    func updateNotificationsAndBadge(
+        dueCount: Int,
+        hour: Int,
+        minute: Int,
+        notificationsEnabled: Bool
+    ) {
+        if notificationsEnabled {
+            updateAppBadge(dueCount: dueCount)
+            scheduleDailyDueWordsNotification(
+                dueCount: dueCount,
+                hour: hour,
+                minute: minute
+            )
+        } else {
+            clearBadge()
+            UNUserNotificationCenter.current()
+                .removePendingNotificationRequests(withIdentifiers: ["dueWordsNotification"])
+        }
+    }
 } 

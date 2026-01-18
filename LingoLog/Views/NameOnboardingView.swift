@@ -2,7 +2,7 @@ import SwiftUI
 
 struct NameOnboardingView: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var userManager = UserManager.shared
+    @ObservedObject var userManager: UserManager
     @State private var nameInput: String = ""
     
     var body: some View {
@@ -93,5 +93,5 @@ struct NameOnboardingView: View {
 }
 
 #Preview {
-    NameOnboardingView()
+    NameOnboardingView(userManager: UserManager.shared)
 }

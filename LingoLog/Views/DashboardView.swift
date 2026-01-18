@@ -1,36 +1,31 @@
 import SwiftUI
 
 struct DashboardView: View {
-    @ObservedObject var dataManager = DataManager.shared
-    @ObservedObject var userManager = UserManager.shared
+    @ObservedObject var userManager: UserManager
+    let dataManager: DataManager
+    let wordRepository: WordRepository
+    let translationService: TranslationService
+    @StateObject private var viewModel: DashboardViewModel
     @State private var showingAddWord = false
     @State private var showingQuiz = false
     @State private var showingOnboarding = false
     
-    // Note: Removed logoGradient in favor of Theme colors
-    
-    private var totalWords: Int {
-        dataManager.fetchWords().count
-    }
-    
-    private var masteredWords: Int {
-        dataManager.fetchWords().filter { $0.isMastered }.count
-    }
-    
-    private var wordsDueForReview: Int {
-        dataManager.fetchWordsDueForReview().count
-    }
-    
-    private var learningStreak: Int {
-        StudyHistoryManager.shared.getCurrentStreak()
-    }
-    
-    private var notificationTimeString: String {
-        let comps = DateComponents(hour: dataManager.notificationHour, minute: dataManager.notificationMinute)
-        let date = Calendar.current.date(from: comps) ?? Date()
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+    init(
+        wordRepository: WordRepository,
+        dataManager: DataManager,
+        userManager: UserManager,
+        translationService: TranslationService
+    ) {
+        self.wordRepository = wordRepository
+        self.dataManager = dataManager
+        self.userManager = userManager
+        self.translationService = translationService
+        _viewModel = StateObject(
+            wrappedValue: DashboardViewModel(
+                wordRepository: wordRepository,
+                dataManager: dataManager
+            )
+        )
     }
     
     var body: some View {
@@ -66,7 +61,7 @@ struct DashboardView: View {
                         
                         QuickActionButton(
                             title: "Take Quiz",
-                            subtitle: "\(wordsDueForReview) words due",
+                            subtitle: "\(viewModel.wordsDueForReview) words due",
                             icon: "brain.head.profile"
                         ) {
                             showingQuiz = true
@@ -80,29 +75,29 @@ struct DashboardView: View {
                     ], spacing: 16) {
                         StatCard(
                             title: "Total Words",
-                            value: "\(totalWords)",
+                            value: "\(viewModel.totalWords)",
                             icon: "book.fill"
                         )
                         StatCard(
                             title: "Mastered Words",
-                            value: "\(masteredWords)",
+                            value: "\(viewModel.masteredWords)",
                             icon: "star.fill"
                         )
                         StatCard(
                             title: "Due for Review",
-                            value: "\(wordsDueForReview)",
+                            value: "\(viewModel.wordsDueForReview)",
                             icon: "clock.fill"
                         )
                         StatCard(
                             title: "Learning Streak",
-                            value: "\(learningStreak) day\(learningStreak == 1 ? "" : "s")",
+                            value: "\(viewModel.learningStreak) day\(viewModel.learningStreak == 1 ? "" : "s")",
                             icon: "flame.fill"
                         )
                     }
                     
                     // Recent Words
-                    if !dataManager.fetchWords().isEmpty {
-                        RecentWordsSection()
+                    if !wordRepository.words.isEmpty {
+                        RecentWordsSection(wordRepository: wordRepository)
                     } else {
                         EmptyStateView()
                     }
@@ -113,16 +108,23 @@ struct DashboardView: View {
             .navigationTitle("")
             .navigationBarHidden(true)
             .sheet(isPresented: $showingAddWord) {
-                AddWordView()
+                AddWordView(
+                    dataManager: dataManager,
+                    translationService: translationService
+                )
             }
             .sheet(isPresented: $showingQuiz) {
-                QuizView()
+                QuizView(
+                    wordRepository: wordRepository,
+                    dataManager: dataManager
+                )
             }
             .sheet(isPresented: $showingOnboarding) {
-                NameOnboardingView()
+                NameOnboardingView(userManager: userManager)
             }
         }
         .onAppear {
+            viewModel.refresh()
             if userManager.shouldShowOnboarding {
                 showingOnboarding = true
             }
@@ -195,10 +197,10 @@ struct StatCard: View {
 }
 
 struct RecentWordsSection: View {
-    @ObservedObject var dataManager = DataManager.shared
+    @ObservedObject var wordRepository: WordRepository
     
     private var recentWords: [WordEntry] {
-        Array(dataManager.fetchWords().prefix(5))
+        Array(wordRepository.words.prefix(5))
     }
     
     var body: some View {
@@ -261,6 +263,11 @@ struct EmptyStateView: View {
 #Preview {
     ZStack {
         Theme.Colors.background.ignoresSafeArea()
-        DashboardView()
+        DashboardView(
+            wordRepository: WordRepository(dataManager: DataManager.shared),
+            dataManager: DataManager.shared,
+            userManager: UserManager.shared,
+            translationService: TranslationService.shared
+        )
     }
 }

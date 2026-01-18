@@ -1,11 +1,20 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @ObservedObject var dataManager = DataManager.shared
-    @ObservedObject var userManager = UserManager.shared
+    @ObservedObject var dataManager: DataManager
+    @ObservedObject var userManager: UserManager
+    let wordRepository: WordRepository
+    @StateObject private var viewModel: SettingsViewModel
     @State private var showingResetAlert = false
     @State private var showingExportSheet = false
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
+    
+    init(wordRepository: WordRepository, dataManager: DataManager, userManager: UserManager) {
+        self.wordRepository = wordRepository
+        self.dataManager = dataManager
+        self.userManager = userManager
+        _viewModel = StateObject(wrappedValue: SettingsViewModel(wordRepository: wordRepository))
+    }
     
     var notificationTime: Date {
         var components = DateComponents()
@@ -42,27 +51,27 @@ struct SettingsView: View {
                     // Statistics Section
                     SettingsSection(title: "Statistics") {
                         VStack(spacing: 8) {
-                            StatisticsRow(title: "Total Words", value: "\(dataManager.fetchWords().count)")
+                            StatisticsRow(title: "Total Words", value: "\(viewModel.totalWords)")
                             Divider().background(Theme.Colors.divider)
-                            StatisticsRow(title: "Mastered Words", value: "\(dataManager.fetchWords().filter { $0.isMastered }.count)")
+                            StatisticsRow(title: "Mastered Words", value: "\(viewModel.masteredWords)")
                             Divider().background(Theme.Colors.divider)
-                            StatisticsRow(title: "Words Due for Review", value: "\(dataManager.fetchWordsDueForReview().count)")
+                            StatisticsRow(title: "Words Due for Review", value: "\(viewModel.wordsDueForReview)")
                         }
                     }
                     
                     // Languages Section
                     SettingsSection(title: "Languages") {
-                        ForEach(dataManager.getAvailableLanguages(), id: \.self) { language in
+                        ForEach(viewModel.languageStats) { stat in
                             HStack {
-                                Theme.Typography.body(language)
+                                Theme.Typography.body(stat.language)
                                     .foregroundColor(Theme.Colors.textPrimary)
                                 Spacer()
-                                Text("\(dataManager.fetchWords(for: language).count) words")
+                                Text("\(stat.count) words")
                                     .font(.caption)
                                     .foregroundColor(Theme.Colors.textSecondary)
                             }
                             // Don't add divider for the last item - simplified for now
-                            if language != dataManager.getAvailableLanguages().last {
+                            if stat.id != viewModel.languageStats.last?.id {
                                 Divider().background(Theme.Colors.divider)
                             }
                         }
@@ -164,31 +173,24 @@ struct SettingsView: View {
                 Text("This will permanently delete all your words and progress. This action cannot be undone.")
             }
             .sheet(isPresented: $showingExportSheet) {
-                ExportDataView()
+                ExportDataView(dataManager: dataManager)
             }
         }
     }
     
     private func resetAllData() {
-        let words = dataManager.fetchWords()
-        for word in words {
+        for word in wordRepository.words {
             dataManager.deleteWord(word)
         }
     }
     
     private func updateNotificationsAndBadge() {
-        let dueCount = dataManager.fetchWordsDueForReview().count
-        if notificationsEnabled {
-            NotificationManager.shared.updateAppBadge(dueCount: dueCount)
-            NotificationManager.shared.scheduleDailyDueWordsNotification(
-                dueCount: dueCount,
-                hour: dataManager.notificationHour,
-                minute: dataManager.notificationMinute
-            )
-        } else {
-            NotificationManager.shared.clearBadge()
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dueWordsNotification"])
-        }
+        NotificationManager.shared.updateNotificationsAndBadge(
+            dueCount: viewModel.wordsDueForReview,
+            hour: dataManager.notificationHour,
+            minute: dataManager.notificationMinute,
+            notificationsEnabled: notificationsEnabled
+        )
     }
 }
 
@@ -236,7 +238,7 @@ struct StatisticsRow: View {
 
 struct ExportDataView: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var dataManager = DataManager.shared
+    @ObservedObject var dataManager: DataManager
     
     private var exportData: String {
         let words = dataManager.fetchWords()
@@ -327,6 +329,10 @@ struct ExportDataView: View {
 #Preview {
     ZStack {
         Theme.Colors.background.ignoresSafeArea()
-        SettingsView()
+        SettingsView(
+            wordRepository: WordRepository(dataManager: DataManager.shared),
+            dataManager: DataManager.shared,
+            userManager: UserManager.shared
+        )
     }
 } 
