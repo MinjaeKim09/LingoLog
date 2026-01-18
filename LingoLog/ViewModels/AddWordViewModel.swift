@@ -34,7 +34,7 @@ final class AddWordViewModel: ObservableObject {
         do {
             allLanguages = try await translationService.fetchLanguages()
         } catch {
-            print("Failed to load languages: \(error)")
+            AppLogger.translation.error("Failed to load languages: \(error.localizedDescription, privacy: .public)")
         }
     }
     

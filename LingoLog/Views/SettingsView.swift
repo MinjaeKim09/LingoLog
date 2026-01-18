@@ -7,6 +7,7 @@ struct SettingsView: View {
     @StateObject private var viewModel: SettingsViewModel
     @State private var showingResetAlert = false
     @State private var showingExportSheet = false
+    @State private var showingNotificationSettingsAlert = false
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
     
     init(wordRepository: WordRepository, dataManager: DataManager, userManager: UserManager) {
@@ -85,7 +86,7 @@ struct SettingsView: View {
                         }
                         .toggleStyle(SwitchToggleStyle(tint: Theme.Colors.accent))
                         .onChange(of: notificationsEnabled) { _, _ in
-                            updateNotificationsAndBadge()
+                            handleNotificationToggle()
                         }
                         
                         if notificationsEnabled {
@@ -131,7 +132,7 @@ struct SettingsView: View {
                         HStack {
                             Theme.Typography.body("Version")
                             Spacer()
-                            Text("1.0.0")
+                            Text(appVersion)
                                 .font(.caption)
                                 .foregroundColor(Theme.Colors.textSecondary)
                         }
@@ -139,13 +140,13 @@ struct SettingsView: View {
                     
                     // Footer Links
                     VStack(spacing: 12) {
-                        if let privacyURL = URL(string: "https://example.com/privacy") {
+                        if let privacyURL = AppConfig.privacyPolicyURL {
                             Link("Privacy Policy", destination: privacyURL)
                                 .font(.caption)
                                 .foregroundColor(Theme.Colors.textSecondary)
                         }
                         
-                        if let termsURL = URL(string: "https://example.com/terms") {
+                        if let termsURL = AppConfig.termsOfServiceURL {
                             Link("Terms of Service", destination: termsURL)
                                 .font(.caption)
                                 .foregroundColor(Theme.Colors.textSecondary)
@@ -172,6 +173,14 @@ struct SettingsView: View {
             } message: {
                 Text("This will permanently delete all your words and progress. This action cannot be undone.")
             }
+            .alert("Notifications Disabled", isPresented: $showingNotificationSettingsAlert) {
+                Button("Open Settings") {
+                    NotificationManager.shared.openAppSettings()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Enable notifications in Settings to receive daily reminders.")
+            }
             .sheet(isPresented: $showingExportSheet) {
                 ExportDataView(dataManager: dataManager)
             }
@@ -181,6 +190,35 @@ struct SettingsView: View {
     private func resetAllData() {
         for word in wordRepository.words {
             dataManager.deleteWord(word)
+        }
+        StudyHistoryManager.shared.reset()
+        userManager.reset()
+        NotificationManager.shared.updateNotificationsAndBadge(
+            dueCount: 0,
+            hour: dataManager.notificationHour,
+            minute: dataManager.notificationMinute,
+            notificationsEnabled: false
+        )
+    }
+    
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+    
+    private func handleNotificationToggle() {
+        if notificationsEnabled {
+            NotificationManager.shared.ensureAuthorization { granted, status in
+                DispatchQueue.main.async {
+                    if granted {
+                        updateNotificationsAndBadge()
+                    } else {
+                        notificationsEnabled = false
+                        showingNotificationSettingsAlert = true
+                    }
+                }
+            }
+        } else {
+            updateNotificationsAndBadge()
         }
     }
     

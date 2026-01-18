@@ -9,7 +9,27 @@ class NotificationManager {
     func requestAuthorization() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
             if let error = error {
-                print("Notification permission error: \(error)")
+                AppLogger.notifications.error("Notification permission error: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+    
+    func ensureAuthorization(completion: @escaping (Bool, UNAuthorizationStatus) -> Void) {
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { settings in
+            switch settings.authorizationStatus {
+            case .notDetermined:
+                center.requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
+                    center.getNotificationSettings { updated in
+                        completion(granted, updated.authorizationStatus)
+                    }
+                }
+            case .authorized, .provisional, .ephemeral:
+                completion(true, settings.authorizationStatus)
+            case .denied:
+                completion(false, settings.authorizationStatus)
+            @unknown default:
+                completion(false, settings.authorizationStatus)
             }
         }
     }
@@ -33,7 +53,7 @@ class NotificationManager {
     func updateAppBadge(dueCount: Int) {
         UNUserNotificationCenter.current().setBadgeCount(dueCount) { error in
             if let error = error {
-                print("Error setting badge count: \(error.localizedDescription)")
+                AppLogger.notifications.error("Error setting badge count: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -41,7 +61,7 @@ class NotificationManager {
     func clearBadge() {
         UNUserNotificationCenter.current().setBadgeCount(0) { error in
             if let error = error {
-                print("Error clearing badge count: \(error.localizedDescription)")
+                AppLogger.notifications.error("Error clearing badge count: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -64,5 +84,10 @@ class NotificationManager {
             UNUserNotificationCenter.current()
                 .removePendingNotificationRequests(withIdentifiers: ["dueWordsNotification"])
         }
+    }
+    
+    func openAppSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 } 

@@ -2,9 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>TranslatorAPIKey</key>
-	<string>YOUR_AZURE_TRANSLATOR_API_KEY_HERE</string>
-	<key>TranslatorProxyURL</key>
-	<string>https://your-proxy.example.com/translate</string>
+	<key>PrivacyPolicyURL</key>
+	<string></string>
+	<key>TermsOfServiceURL</key>
+	<string></string>
 </dict>
 </plist>

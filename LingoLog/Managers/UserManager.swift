@@ -58,9 +58,15 @@ class UserManager: ObservableObject {
                 }
             }
         } catch {
-            print("Regex error: \(error)")
+            AppLogger.user.error("Regex error: \(error.localizedDescription, privacy: .public)")
         }
         
         return nil
+    }
+    
+    func reset() {
+        userName = ""
+        doNotAskName = false
+        UserDefaults.standard.removeObject(forKey: userNameKey)
     }
 }

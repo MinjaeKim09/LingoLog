@@ -21,7 +21,7 @@ final class WordRepository: ObservableObject {
         do {
             words = try dataManager.viewContext.fetch(request)
         } catch {
-            print("Error fetching words: \(error)")
+            AppLogger.data.error("Error fetching words: \(error.localizedDescription, privacy: .public)")
             words = []
         }
     }
