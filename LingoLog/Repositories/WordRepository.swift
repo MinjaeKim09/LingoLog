@@ -10,6 +10,9 @@ final class WordRepository: ObservableObject {
     /// Safe value-type snapshots for display in SwiftUI views
     @Published private(set) var displayModels: [WordDisplayModel] = []
     
+    /// Flag to suppress notification-driven refresh during explicit operations
+    private(set) var isSuppressingRefresh = false
+    
     private let dataManager: DataManager
     private var cancellables = Set<AnyCancellable>()
     
@@ -17,6 +20,11 @@ final class WordRepository: ObservableObject {
         self.dataManager = dataManager
         refresh()
         observeContextChanges()
+    }
+    
+    /// Enable or disable refresh suppression during explicit operations
+    func suppressRefresh(_ suppress: Bool) {
+        isSuppressingRefresh = suppress
     }
     
     func refresh() {
@@ -72,8 +80,11 @@ final class WordRepository: ObservableObject {
         // Core Data often emits multiple change notifications for one user action.
         // Debouncing prevents SwiftUI list diffing from "thrashing" mid-gesture.
         .receive(on: RunLoop.main)
-        .debounce(for: .milliseconds(80), scheduler: RunLoop.main)
-        .sink { [weak self] _ in self?.refresh() }
+        .debounce(for: .milliseconds(150), scheduler: RunLoop.main)
+        .sink { [weak self] _ in
+            guard let self, !self.isSuppressingRefresh else { return }
+            self.refresh()
+        }
         .store(in: &cancellables)
     }
 }

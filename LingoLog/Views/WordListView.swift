@@ -58,32 +58,26 @@ struct WordListView: View {
                 // Word List
                 List {
                     ForEach(viewModel.filteredWords) { word in
-                        WordRowView(word: word)
-                            .padding(.vertical, 8)
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                            .contentShape(Rectangle()) // Make the whole row tappable
-                            .onTapGesture {
-                                wordToEditID = word.objectID
-                            }
-                    }
-                    .onDelete { indexSet in
-                        // Capture objectIDs BEFORE mutating data (prevents index/identity glitches)
-                        let objectIDsToDelete = indexSet.map { viewModel.filteredWords[$0].objectID }
-                        
-                        // If we're editing a word that's being deleted, dismiss the sheet first.
-                        if let currentEditID = wordToEditID, objectIDsToDelete.contains(currentEditID) {
-                            wordToEditID = nil
+                        Button {
+                            wordToEditID = word.objectID
+                        } label: {
+                            WordRowView(word: word)
                         }
-                        
-                        withAnimation(.easeInOut(duration: 0.22)) {
-                            for objectID in objectIDsToDelete {
-                                if let wordEntry = viewModel.wordEntry(for: objectID) {
-                                    dataManager.deleteWord(wordEntry)
+                        .buttonStyle(.plain)
+                        .padding(.vertical, 8)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                if let index = viewModel.filteredWords.firstIndex(where: { $0.id == word.id }) {
+                                    viewModel.deleteWords(at: IndexSet(integer: index), dataManager: dataManager)
                                 }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
                             }
                         }
                     }
+
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
