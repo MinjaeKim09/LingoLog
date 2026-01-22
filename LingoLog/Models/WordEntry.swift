@@ -24,8 +24,8 @@ extension WordEntry {
     func updateMasteryLevel(correct: Bool) {
         if correct {
             masteryLevel = min(5, masteryLevel + 1)
-            // Set a 24-hour cooldown before next review
-            nextReviewDate = Calendar.current.date(byAdding: .hour, value: 24, to: Date())
+            let intervalDays = reviewIntervalDays(for: masteryLevel)
+            nextReviewDate = Calendar.current.date(byAdding: .day, value: intervalDays, to: Date())
         } else {
             masteryLevel = max(0, masteryLevel - 1)
             // Make the word immediately due again
@@ -35,6 +35,17 @@ extension WordEntry {
         reviewCount += 1
         lastReviewed = Date()
         isMastered = masteryLevel >= 5
+    }
+
+    private func reviewIntervalDays(for level: Int32) -> Int {
+        switch level {
+        case 1: return 1
+        case 2: return 3
+        case 3: return 7
+        case 4: return 14
+        case 5: return 30
+        default: return 1
+        }
     }
     
     var isDueForReview: Bool {
