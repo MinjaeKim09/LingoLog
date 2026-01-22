@@ -1,37 +1,31 @@
 import SwiftUI
-import Combine
-
 
 struct AddWordView: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var dataManager = DataManager.shared
+    let dataManager: DataManager
+    let translationService: TranslationService
+    @StateObject private var viewModel: AddWordViewModel
     
-    @State private var inputText = ""
-    @AppStorage("lastUsedSourceLanguage") private var sourceLanguage = "en"
-    @State private var translation: String? = nil
-    @AppStorage("lastUsedTargetLanguage") private var targetLanguage = "en"
-    @State private var context = ""
-    @State private var isTranslating = false
-    @State private var errorMessage: String? = nil
-    @State private var debounceCancellable: AnyCancellable? = nil
-
     @State private var showingSourcePicker = false
     @State private var showingTargetPicker = false
-    @State private var allLanguages: [Language] = []
     
     // Add state for animation
     @State private var isSwapped = false
     
+    init(dataManager: DataManager, translationService: TranslationService) {
+        self.dataManager = dataManager
+        self.translationService = translationService
+        _viewModel = StateObject(
+            wrappedValue: AddWordViewModel(
+                dataManager: dataManager,
+                translationService: translationService
+            )
+        )
+    }
+    
     private func swapLanguages() {
-        let temp = sourceLanguage
-        sourceLanguage = targetLanguage
-        targetLanguage = temp
+        viewModel.swapLanguages()
         isSwapped.toggle()
-        
-        // Trigger translation with new direction if there is input
-        if !inputText.isEmpty {
-            translate(text: inputText)
-        }
     }
     
     var body: some View {
@@ -46,7 +40,7 @@ struct AddWordView: View {
                             Theme.Typography.title("Word or Phrase")
                                 .foregroundColor(Theme.Colors.textPrimary)
                             
-                            TextField("Type or paste here", text: $inputText)
+                            TextField("Type or paste here", text: $viewModel.inputText)
                                 .padding()
                                 .background(Theme.Colors.inputBackground)
                                 .cornerRadius(12)
@@ -57,14 +51,6 @@ struct AddWordView: View {
                                     RoundedRectangle(cornerRadius: 12)
                                         .stroke(Theme.Colors.divider, lineWidth: 1)
                                 )
-                                .onChange(of: inputText) { _, newValue in
-                                    debounceCancellable?.cancel()
-                                    debounceCancellable = Just(newValue)
-                                        .delay(for: .milliseconds(500), scheduler: RunLoop.main)
-                                        .sink { value in
-                                            translate(text: value)
-                                        }
-                                }
                         }
                         .padding()
                         .glassCard()
@@ -79,7 +65,7 @@ struct AddWordView: View {
                                 
                                 Button(action: { showingSourcePicker = true }) {
                                     HStack {
-                                        Text(getLanguageName(code: sourceLanguage))
+                                        Text(viewModel.languageName(for: viewModel.sourceLanguage))
                                             .foregroundColor(Theme.Colors.textPrimary)
                                             .lineLimit(1)
                                             .truncationMode(.tail)
@@ -116,7 +102,7 @@ struct AddWordView: View {
                                 
                                 Button(action: { showingTargetPicker = true }) {
                                     HStack {
-                                        Text(getLanguageName(code: targetLanguage))
+                                        Text(viewModel.languageName(for: viewModel.targetLanguage))
                                             .foregroundColor(Theme.Colors.textPrimary)
                                             .lineLimit(1)
                                             .truncationMode(.tail)
@@ -137,7 +123,7 @@ struct AddWordView: View {
                         .glassCard()
                         
                         // Status & Result
-                        if isTranslating && translation == nil {
+                        if viewModel.isTranslating && viewModel.translation == nil {
                             HStack(spacing: 12) {
                                 ProgressView()
                                 Theme.Typography.body("Translating...")
@@ -148,13 +134,13 @@ struct AddWordView: View {
                             .glassCard()
                         }
                         
-                        if let translated = translation, !translated.isEmpty {
+                        if let translated = viewModel.translation, !translated.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
                                     Theme.Typography.title("Translation")
                                         .foregroundColor(Theme.Colors.textPrimary)
                                     
-                                    if isTranslating {
+                                    if viewModel.isTranslating {
                                         Spacer()
                                         ProgressView()
                                             .scaleEffect(0.8)
@@ -179,7 +165,7 @@ struct AddWordView: View {
                             ))
                         }
                         
-                        if let error = errorMessage {
+                        if let error = viewModel.errorMessage {
                             Text(error)
                                 .foregroundColor(Theme.Colors.error)
                                 .font(.caption)
@@ -192,7 +178,7 @@ struct AddWordView: View {
                             Theme.Typography.title("Context (Optional)")
                                 .foregroundColor(Theme.Colors.textPrimary)
                             
-                            TextField("Where did you see this? (e.g., K-drama)", text: $context)
+                            TextField("Where did you see this? (e.g., K-drama)", text: $viewModel.context)
                                 .padding()
                                 .background(Theme.Colors.inputBackground)
                                 .cornerRadius(12)
@@ -218,98 +204,44 @@ struct AddWordView: View {
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button {
-                            if let translated = translation, !translated.isEmpty {
-                                saveTranslation(translated: translated)
-                            }
+                            viewModel.saveTranslation()
+                            dismiss()
                         } label: {
                             Text("Save")
                                 .fontWeight(.semibold)
                         }
-                        .disabled(translation == nil || translation?.isEmpty == true)
-                        .foregroundStyle(translation == nil || translation?.isEmpty == true ? Color.gray : Theme.Colors.accent)
+                        .disabled(viewModel.translation == nil || viewModel.translation?.isEmpty == true)
+                        .foregroundStyle(viewModel.translation == nil || viewModel.translation?.isEmpty == true ? Color.gray : Theme.Colors.accent)
                     }
                 }
             }
             .navigationViewStyle(.stack)
             .sheet(isPresented: $showingSourcePicker) {
-                LanguagePickerView(selectedLanguage: $sourceLanguage, title: "Translate From")
+                LanguagePickerView(
+                    selectedLanguage: $viewModel.sourceLanguage,
+                    title: "Translate From",
+                    languages: viewModel.allLanguages
+                )
             }
             .sheet(isPresented: $showingTargetPicker) {
-                LanguagePickerView(selectedLanguage: $targetLanguage, title: "Translate To")
-            }
-            .onChange(of: sourceLanguage) { _, _ in
-                if !inputText.isEmpty { translate(text: inputText) }
-            }
-            .onChange(of: targetLanguage) { _, _ in
-                if !inputText.isEmpty { translate(text: inputText) }
+                LanguagePickerView(
+                    selectedLanguage: $viewModel.targetLanguage,
+                    title: "Translate To",
+                    languages: viewModel.allLanguages
+                )
             }
             .task {
-                do {
-                    allLanguages = try await TranslationService.shared.fetchLanguages()
-                } catch {
-                    print("Failed to load languages: \(error)")
-                }
-            }
-            .onAppear {
-                // Reset fields or setup if needed
+                await viewModel.loadLanguages()
             }
         }
 
     }
     
-    private func translate(text: String) {
-        guard !text.isEmpty else {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                translation = nil
-                isTranslating = false
-            }
-            return
-        }
-        
-        isTranslating = true
-        errorMessage = nil
-        
-        
-        Task {
-            do {
-                let result = try await TranslationService.shared.translate(
-                    text: text,
-                    from: sourceLanguage,
-                    to: targetLanguage
-                )
-                await MainActor.run {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                        self.translation = result
-                        self.isTranslating = false
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    withAnimation {
-                        self.translation = nil
-                        self.errorMessage = "Translation failed: \(error.localizedDescription)"
-                        self.isTranslating = false
-                    }
-                }
-            }
-        }
-    }
-    
-    private func saveTranslation(translated: String) {
-        dataManager.addWord(
-            word: inputText,
-            translation: translated,
-            language: targetLanguage,
-            context: context.isEmpty ? nil : context
-        )
-        dismiss()
-    }
-    
-    private func getLanguageName(code: String) -> String {
-        return allLanguages.first(where: { $0.code == code })?.name ?? code
-    }
 }
 
 #Preview {
-    AddWordView()
+    AddWordView(
+        dataManager: DataManager.shared,
+        translationService: TranslationService.shared
+    )
 } 

@@ -1,31 +1,16 @@
 import SwiftUI
 
 struct WordListView: View {
-    @ObservedObject var dataManager = DataManager.shared
-    @State private var selectedLanguage: String = "All"
+    let dataManager: DataManager
+    let translationService: TranslationService
+    @StateObject private var viewModel: WordListViewModel
     @State private var showingAddWord = false
-    @State private var searchText = ""
     @State private var wordToEdit: WordEntry?
     
-    // Note: Removed logoGradient in favor of Theme colors
-    
-    private var filteredWords: [WordEntry] {
-        let words = dataManager.fetchWords(for: selectedLanguage == "All" ? nil : selectedLanguage)
-        if searchText.isEmpty {
-            return words
-        } else {
-            return words.filter { word in
-                (word.word?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                (word.translation?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                (word.context?.localizedCaseInsensitiveContains(searchText) ?? false)
-            }
-        }
-    }
-    
-    private var availableLanguages: [String] {
-        var languages = ["All"]
-        languages.append(contentsOf: dataManager.getAvailableLanguages())
-        return languages
+    init(wordRepository: WordRepository, dataManager: DataManager, translationService: TranslationService) {
+        self.dataManager = dataManager
+        self.translationService = translationService
+        _viewModel = StateObject(wrappedValue: WordListViewModel(wordRepository: wordRepository))
     }
     
     var body: some View {
@@ -36,12 +21,12 @@ struct WordListView: View {
                     // Language Filter
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
-                            ForEach(availableLanguages, id: \.self) { language in
+                            ForEach(viewModel.availableLanguages, id: \.self) { language in
                                 LanguageFilterButton(
                                     language: language,
-                                    isSelected: selectedLanguage == language
+                                    isSelected: viewModel.selectedLanguage == language
                                 ) {
-                                    selectedLanguage = language
+                                    viewModel.selectedLanguage = language
                                 }
                             }
                         }
@@ -52,7 +37,7 @@ struct WordListView: View {
                     HStack {
                         Image(systemName: "magnifyingglass")
                             .foregroundStyle(Theme.Colors.textSecondary)
-                        TextField("Search words...", text: $searchText)
+                        TextField("Search words...", text: $viewModel.searchText)
                             .foregroundStyle(Theme.Colors.textPrimary)
                     }
                     .padding()
@@ -69,7 +54,7 @@ struct WordListView: View {
                 
                 // Word List
                 List {
-                    ForEach(filteredWords, id: \.id) { word in
+                    ForEach(viewModel.filteredWords, id: \.id) { word in
                         WordRowView(word: word)
                             .padding(.vertical, 8)
                             .listRowSeparator(.hidden)
@@ -81,8 +66,8 @@ struct WordListView: View {
                     }
                     .onDelete { indexSet in
                         for index in indexSet {
-                            if index < filteredWords.count {
-                                let wordToDelete = filteredWords[index]
+                            if index < viewModel.filteredWords.count {
+                                let wordToDelete = viewModel.filteredWords[index]
                                 dataManager.deleteWord(wordToDelete)
                             }
                         }
@@ -108,10 +93,13 @@ struct WordListView: View {
                 }
             }
             .sheet(isPresented: $showingAddWord) {
-                AddWordView()
+                AddWordView(
+                    dataManager: dataManager,
+                    translationService: translationService
+                )
             }
             .sheet(item: $wordToEdit) { word in
-                EditWordView(word: word)
+                EditWordView(word: word, dataManager: dataManager)
             }
         }
     }
@@ -220,6 +208,10 @@ struct LanguageFilterButton: View {
 #Preview {
     ZStack {
         Theme.Colors.background.ignoresSafeArea()
-        WordListView()
+        WordListView(
+            wordRepository: WordRepository(dataManager: DataManager.shared),
+            dataManager: DataManager.shared,
+            translationService: TranslationService.shared
+        )
     }
 } 

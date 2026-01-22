@@ -11,9 +11,14 @@ import UserNotifications
 @main
 struct LingoLogApp: App {
     let dataManager = DataManager.shared
+    let wordRepository: WordRepository
+    let userManager = UserManager.shared
+    let translationService = TranslationService.shared
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
     
     init() {
+        self.wordRepository = WordRepository(dataManager: dataManager)
         NotificationManager.shared.requestAuthorization()
     }
     
@@ -21,8 +26,12 @@ struct LingoLogApp: App {
         WindowGroup {
             ZStack {
                 Theme.Colors.background.ignoresSafeArea()
-                ContentView()
-                    .environmentObject(dataManager)
+                ContentView(
+                    dataManager: dataManager,
+                    wordRepository: wordRepository,
+                    userManager: userManager,
+                    translationService: translationService
+                )
                     .onAppear {
                         updateNotificationsAndBadge()
                     }
@@ -36,19 +45,12 @@ struct LingoLogApp: App {
     }
     
     private func updateNotificationsAndBadge() {
-        let dueCount = dataManager.fetchWordsDueForReview().count
-        let notificationsEnabled = UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? true
-        
-        if notificationsEnabled {
-            NotificationManager.shared.updateAppBadge(dueCount: dueCount)
-            NotificationManager.shared.scheduleDailyDueWordsNotification(
-                dueCount: dueCount,
-                hour: dataManager.notificationHour,
-                minute: dataManager.notificationMinute
-            )
-        } else {
-            NotificationManager.shared.clearBadge()
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dueWordsNotification"])
-        }
+        wordRepository.refresh()
+        NotificationManager.shared.updateNotificationsAndBadge(
+            dueCount: wordRepository.dueWords().count,
+            hour: dataManager.notificationHour,
+            minute: dataManager.notificationMinute,
+            notificationsEnabled: notificationsEnabled
+        )
     }
 }

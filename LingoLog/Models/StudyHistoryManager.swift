@@ -31,6 +31,11 @@ class StudyHistoryManager {
         }
     }
     
+    func reset() {
+        cachedDates.removeAll()
+        UserDefaults.standard.removeObject(forKey: studyDatesKey)
+    }
+    
     func hasStudied(on date: Date) -> Bool {
         let dateString = dateFormatter.string(from: date)
         return cachedDates.contains(dateString)

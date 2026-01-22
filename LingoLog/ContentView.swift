@@ -8,27 +8,48 @@
 import SwiftUI
 
 struct ContentView: View {
+    let dataManager: DataManager
+    let wordRepository: WordRepository
+    let userManager: UserManager
+    let translationService: TranslationService
+    
     var body: some View {
         TabView {
-            DashboardView()
+            DashboardView(
+                wordRepository: wordRepository,
+                dataManager: dataManager,
+                userManager: userManager,
+                translationService: translationService
+            )
                 .tabItem {
                     Image(systemName: "house.fill")
                     Text("Dashboard")
                 }
             
-            WordListView()
+            WordListView(
+                wordRepository: wordRepository,
+                dataManager: dataManager,
+                translationService: translationService
+            )
                 .tabItem {
                     Image(systemName: "book.fill")
                     Text("Words")
                 }
             
-            QuizView()
+            QuizView(
+                wordRepository: wordRepository,
+                dataManager: dataManager
+            )
                 .tabItem {
                     Image(systemName: "brain.head.profile")
                     Text("Quiz")
                 }
             
-            SettingsView()
+            SettingsView(
+                wordRepository: wordRepository,
+                dataManager: dataManager,
+                userManager: userManager
+            )
                 .tabItem {
                     Image(systemName: "gear")
                     Text("Settings")
@@ -39,5 +60,10 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ContentView(
+        dataManager: DataManager.shared,
+        wordRepository: WordRepository(dataManager: DataManager.shared),
+        userManager: UserManager.shared,
+        translationService: TranslationService.shared
+    )
 }

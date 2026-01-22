@@ -3,6 +3,7 @@ import SwiftUI
 struct EditWordView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var word: WordEntry
+    let dataManager: DataManager
     
     @State private var editedWord: String = ""
     @State private var editedTranslation: String = ""
@@ -103,7 +104,7 @@ struct EditWordView: View {
         word.word = editedWord
         word.translation = editedTranslation
         word.context = editedContext.isEmpty ? nil : editedContext
-        DataManager.shared.save()
+        dataManager.save()
         dismiss()
     }
 }

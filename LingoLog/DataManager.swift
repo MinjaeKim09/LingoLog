@@ -25,7 +25,7 @@ class DataManager: ObservableObject {
         
         container.loadPersistentStores { description, error in
             if let error = error {
-                print("Core Data failed to load: \(error.localizedDescription)")
+                AppLogger.data.error("Core Data failed to load: \(error.localizedDescription, privacy: .public)")
             }
         }
         
@@ -55,7 +55,7 @@ class DataManager: ObservableObject {
                 try viewContext.save()
                 self.objectWillChange.send()
             } catch {
-                print("Error saving context: \(error)")
+                AppLogger.data.error("Error saving context: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -88,7 +88,7 @@ class DataManager: ObservableObject {
         do {
             return try viewContext.fetch(request)
         } catch {
-            print("Error fetching words: \(error)")
+            AppLogger.data.error("Error fetching words: \(error.localizedDescription, privacy: .public)")
             return []
         }
     }
@@ -103,7 +103,7 @@ class DataManager: ObservableObject {
         do {
             return try viewContext.fetch(request)
         } catch {
-            print("Error fetching words due for review: \(error)")
+            AppLogger.data.error("Error fetching words due for review: \(error.localizedDescription, privacy: .public)")
             return []
         }
     }
@@ -118,7 +118,7 @@ class DataManager: ObservableObject {
             let results = try viewContext.fetch(request)
             return results.compactMap { $0["language"] as? String }.sorted()
         } catch {
-            print("Error fetching languages: \(error)")
+            AppLogger.data.error("Error fetching languages: \(error.localizedDescription, privacy: .public)")
             return []
         }
     }
