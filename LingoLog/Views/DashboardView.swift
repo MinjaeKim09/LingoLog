@@ -142,23 +142,31 @@ struct QuickActionButton: View {
         Button(action: action) {
             VStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.title)
+                    // Normalize SF Symbol bounding boxes across different icons.
+                    .font(.system(size: 32, weight: .regular))
+                    .frame(width: 44, height: 44)
                     .foregroundStyle(Theme.Colors.accent)
                 
                 VStack(spacing: 4) {
                     Theme.Typography.title(title)
                         .font(.headline) // Override size slightly for button context
                         .foregroundColor(Theme.Colors.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                     
                     Theme.Typography.body(subtitle)
                         .font(.caption)
                         .foregroundColor(Theme.Colors.textSecondary)
                         .multilineTextAlignment(.center)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 20)
             .padding(.horizontal, 10)
+            // Ensure both quick-action cards are identical height.
+            .frame(height: 148)
             .glassCard()
         }
         .buttonStyle(PlainButtonStyle())

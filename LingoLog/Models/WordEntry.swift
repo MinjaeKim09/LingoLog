@@ -5,8 +5,10 @@ import CoreData
 /// A value type snapshot of WordEntry for use in SwiftUI views.
 /// This decouples views from Core Data lifecycle (deletion, faulting, etc.)
 struct WordDisplayModel: Identifiable, Equatable {
-    let id: UUID
     let objectID: NSManagedObjectID
+    /// Stable identity for SwiftUI diffing/animations.
+    /// Using `objectID` avoids accidental "new ID" glitches during refreshes.
+    var id: NSManagedObjectID { objectID }
     let word: String
     let translation: String
     let language: String
@@ -18,7 +20,6 @@ struct WordDisplayModel: Identifiable, Equatable {
     let nextReviewDate: Date?
     
     init(from entry: WordEntry) {
-        self.id = entry.id ?? UUID()
         self.objectID = entry.objectID
         self.word = entry.word ?? ""
         self.translation = entry.translation ?? ""

@@ -69,9 +69,11 @@ final class WordRepository: ObservableObject {
             for: .NSManagedObjectContextObjectsDidChange,
             object: dataManager.viewContext
         )
-        .sink { [weak self] _ in
-            self?.refresh()
-        }
+        // Core Data often emits multiple change notifications for one user action.
+        // Debouncing prevents SwiftUI list diffing from "thrashing" mid-gesture.
+        .receive(on: RunLoop.main)
+        .debounce(for: .milliseconds(80), scheduler: RunLoop.main)
+        .sink { [weak self] _ in self?.refresh() }
         .store(in: &cancellables)
     }
 }

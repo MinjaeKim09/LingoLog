@@ -68,11 +68,19 @@ struct WordListView: View {
                             }
                     }
                     .onDelete { indexSet in
-                        // Look up the managed objects by objectID and delete them
-                        for index in indexSet {
-                            let displayModel = viewModel.filteredWords[index]
-                            if let wordEntry = viewModel.wordEntry(for: displayModel.objectID) {
-                                dataManager.deleteWord(wordEntry)
+                        // Capture objectIDs BEFORE mutating data (prevents index/identity glitches)
+                        let objectIDsToDelete = indexSet.map { viewModel.filteredWords[$0].objectID }
+                        
+                        // If we're editing a word that's being deleted, dismiss the sheet first.
+                        if let currentEditID = wordToEditID, objectIDsToDelete.contains(currentEditID) {
+                            wordToEditID = nil
+                        }
+                        
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            for objectID in objectIDsToDelete {
+                                if let wordEntry = viewModel.wordEntry(for: objectID) {
+                                    dataManager.deleteWord(wordEntry)
+                                }
                             }
                         }
                     }
