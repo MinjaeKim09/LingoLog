@@ -1,4 +1,5 @@
 import Combine
+import CoreData
 import Foundation
 
 @MainActor
@@ -6,7 +7,7 @@ final class WordListViewModel: ObservableObject {
     @Published var selectedLanguage: String = "All"
     @Published var searchText: String = ""
     @Published private(set) var availableLanguages: [String] = ["All"]
-    @Published private(set) var filteredWords: [WordEntry] = []
+    @Published private(set) var filteredWords: [WordDisplayModel] = []
     
     private let wordRepository: WordRepository
     private var cancellables = Set<AnyCancellable>()
@@ -17,13 +18,18 @@ final class WordListViewModel: ObservableObject {
         refresh()
     }
     
+    /// Get the managed WordEntry for a given objectID (for delete operations)
+    func wordEntry(for objectID: NSManagedObjectID) -> WordEntry? {
+        wordRepository.wordEntry(for: objectID)
+    }
+    
     func refresh() {
         availableLanguages = ["All"] + wordRepository.availableLanguages()
         updateFilteredWords()
     }
     
     private func bind() {
-        wordRepository.$words
+        wordRepository.$displayModels
             .sink { [weak self] _ in
                 self?.refresh()
             }
@@ -37,7 +43,7 @@ final class WordListViewModel: ObservableObject {
     }
     
     private func updateFilteredWords() {
-        let words = wordRepository.words(for: selectedLanguage == "All" ? nil : selectedLanguage)
+        let words = wordRepository.displayModels(for: selectedLanguage == "All" ? nil : selectedLanguage)
         guard !searchText.isEmpty else {
             filteredWords = words
             return
@@ -45,8 +51,8 @@ final class WordListViewModel: ObservableObject {
         
         let query = searchText
         filteredWords = words.filter { word in
-            (word.word?.localizedCaseInsensitiveContains(query) ?? false) ||
-            (word.translation?.localizedCaseInsensitiveContains(query) ?? false) ||
+            word.word.localizedCaseInsensitiveContains(query) ||
+            word.translation.localizedCaseInsensitiveContains(query) ||
             (word.context?.localizedCaseInsensitiveContains(query) ?? false)
         }
     }

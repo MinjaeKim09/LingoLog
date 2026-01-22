@@ -1,6 +1,38 @@
 import Foundation
 import CoreData
 
+// MARK: - Value Type for Safe SwiftUI Display
+/// A value type snapshot of WordEntry for use in SwiftUI views.
+/// This decouples views from Core Data lifecycle (deletion, faulting, etc.)
+struct WordDisplayModel: Identifiable, Equatable {
+    let id: UUID
+    let objectID: NSManagedObjectID
+    let word: String
+    let translation: String
+    let language: String
+    let context: String?
+    let dateAdded: Date?
+    let reviewCount: Int32
+    let masteryLevel: Int32
+    let isMastered: Bool
+    let nextReviewDate: Date?
+    
+    init(from entry: WordEntry) {
+        self.id = entry.id ?? UUID()
+        self.objectID = entry.objectID
+        self.word = entry.word ?? ""
+        self.translation = entry.translation ?? ""
+        self.language = entry.language ?? ""
+        self.context = entry.context
+        self.dateAdded = entry.dateAdded
+        self.reviewCount = entry.reviewCount
+        self.masteryLevel = entry.masteryLevel
+        self.isMastered = entry.isMastered
+        self.nextReviewDate = entry.nextReviewDate
+    }
+}
+
+// MARK: - WordEntry Extension
 extension WordEntry {
     static func create(in context: NSManagedObjectContext, 
                       word: String, 

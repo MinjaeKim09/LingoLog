@@ -1,15 +1,18 @@
 import SwiftUI
+import CoreData
 
 struct WordListView: View {
     let dataManager: DataManager
     let translationService: TranslationService
+    let wordRepository: WordRepository
     @StateObject private var viewModel: WordListViewModel
     @State private var showingAddWord = false
-    @State private var wordToEdit: WordEntry?
+    @State private var wordToEditID: NSManagedObjectID?
     
     init(wordRepository: WordRepository, dataManager: DataManager, translationService: TranslationService) {
         self.dataManager = dataManager
         self.translationService = translationService
+        self.wordRepository = wordRepository
         _viewModel = StateObject(wrappedValue: WordListViewModel(wordRepository: wordRepository))
     }
     
@@ -54,21 +57,22 @@ struct WordListView: View {
                 
                 // Word List
                 List {
-                    ForEach(viewModel.filteredWords, id: \.id) { word in
+                    ForEach(viewModel.filteredWords) { word in
                         WordRowView(word: word)
                             .padding(.vertical, 8)
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
                             .contentShape(Rectangle()) // Make the whole row tappable
                             .onTapGesture {
-                                wordToEdit = word
+                                wordToEditID = word.objectID
                             }
                     }
                     .onDelete { indexSet in
+                        // Look up the managed objects by objectID and delete them
                         for index in indexSet {
-                            if index < viewModel.filteredWords.count {
-                                let wordToDelete = viewModel.filteredWords[index]
-                                dataManager.deleteWord(wordToDelete)
+                            let displayModel = viewModel.filteredWords[index]
+                            if let wordEntry = viewModel.wordEntry(for: displayModel.objectID) {
+                                dataManager.deleteWord(wordEntry)
                             }
                         }
                     }
@@ -98,25 +102,31 @@ struct WordListView: View {
                     translationService: translationService
                 )
             }
-            .sheet(item: $wordToEdit) { word in
-                EditWordView(word: word, dataManager: dataManager)
+            .sheet(isPresented: Binding(
+                get: { wordToEditID != nil },
+                set: { if !$0 { wordToEditID = nil } }
+            )) {
+                if let objectID = wordToEditID,
+                   let wordEntry = wordRepository.wordEntry(for: objectID) {
+                    EditWordView(word: wordEntry, dataManager: dataManager)
+                }
             }
         }
     }
 }
 
 struct WordRowView: View {
-    @ObservedObject var word: WordEntry
+    let word: WordDisplayModel
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Theme.Typography.title(word.word ?? "")
+                    Theme.Typography.title(word.word)
                         .font(.headline)
                         .foregroundColor(Theme.Colors.textPrimary)
                     
-                    Theme.Typography.body(word.translation ?? "")
+                    Theme.Typography.body(word.translation)
                         .foregroundColor(Theme.Colors.textSecondary)
                 }
                 
@@ -131,7 +141,7 @@ struct WordRowView: View {
                         }
                     }
                     
-                    Text(word.language ?? "")
+                    Text(word.language)
                         .font(.caption)
                         .fontWeight(.medium)
                         .padding(.horizontal, 8)

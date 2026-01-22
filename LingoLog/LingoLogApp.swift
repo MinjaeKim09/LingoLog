@@ -12,6 +12,7 @@ import UserNotifications
 struct LingoLogApp: App {
     let dataManager = DataManager.shared
     let wordRepository: WordRepository
+    let storyRepository: StoryRepository
     let userManager = UserManager.shared
     let translationService = TranslationService.shared
     @Environment(\.scenePhase) private var scenePhase
@@ -19,6 +20,7 @@ struct LingoLogApp: App {
     
     init() {
         self.wordRepository = WordRepository(dataManager: dataManager)
+        self.storyRepository = StoryRepository(dataManager: dataManager)
         NotificationManager.shared.requestAuthorization()
     }
     
@@ -29,6 +31,7 @@ struct LingoLogApp: App {
                 ContentView(
                     dataManager: dataManager,
                     wordRepository: wordRepository,
+                    storyRepository: storyRepository,
                     userManager: userManager,
                     translationService: translationService
                 )

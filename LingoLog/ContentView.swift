@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     let dataManager: DataManager
     let wordRepository: WordRepository
+    let storyRepository: StoryRepository
     let userManager: UserManager
     let translationService: TranslationService
     
@@ -45,6 +46,15 @@ struct ContentView: View {
                     Text("Quiz")
                 }
             
+            StoryView(
+                wordRepository: wordRepository,
+                storyRepository: storyRepository
+            )
+                .tabItem {
+                    Image(systemName: "book.pages.fill")
+                    Text("Stories")
+                }
+            
             SettingsView(
                 wordRepository: wordRepository,
                 dataManager: dataManager,
@@ -63,6 +73,7 @@ struct ContentView: View {
     ContentView(
         dataManager: DataManager.shared,
         wordRepository: WordRepository(dataManager: DataManager.shared),
+        storyRepository: StoryRepository(dataManager: DataManager.shared),
         userManager: UserManager.shared,
         translationService: TranslationService.shared
     )
