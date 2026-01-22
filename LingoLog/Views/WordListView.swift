@@ -1,15 +1,18 @@
 import SwiftUI
+import CoreData
 
 struct WordListView: View {
     let dataManager: DataManager
     let translationService: TranslationService
+    let wordRepository: WordRepository
     @StateObject private var viewModel: WordListViewModel
     @State private var showingAddWord = false
-    @State private var wordToEdit: WordEntry?
+    @State private var wordToEditID: NSManagedObjectID?
     
     init(wordRepository: WordRepository, dataManager: DataManager, translationService: TranslationService) {
         self.dataManager = dataManager
         self.translationService = translationService
+        self.wordRepository = wordRepository
         _viewModel = StateObject(wrappedValue: WordListViewModel(wordRepository: wordRepository))
     }
     
@@ -54,24 +57,27 @@ struct WordListView: View {
                 
                 // Word List
                 List {
-                    ForEach(viewModel.filteredWords, id: \.id) { word in
-                        WordRowView(word: word)
-                            .padding(.vertical, 8)
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                            .contentShape(Rectangle()) // Make the whole row tappable
-                            .onTapGesture {
-                                wordToEdit = word
-                            }
-                    }
-                    .onDelete { indexSet in
-                        for index in indexSet {
-                            if index < viewModel.filteredWords.count {
-                                let wordToDelete = viewModel.filteredWords[index]
-                                dataManager.deleteWord(wordToDelete)
+                    ForEach(viewModel.filteredWords) { word in
+                        Button {
+                            wordToEditID = word.objectID
+                        } label: {
+                            WordRowView(word: word)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.vertical, 8)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                if let index = viewModel.filteredWords.firstIndex(where: { $0.id == word.id }) {
+                                    viewModel.deleteWords(at: IndexSet(integer: index), dataManager: dataManager)
+                                }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
                             }
                         }
                     }
+
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -98,25 +104,31 @@ struct WordListView: View {
                     translationService: translationService
                 )
             }
-            .sheet(item: $wordToEdit) { word in
-                EditWordView(word: word, dataManager: dataManager)
+            .sheet(isPresented: Binding(
+                get: { wordToEditID != nil },
+                set: { if !$0 { wordToEditID = nil } }
+            )) {
+                if let objectID = wordToEditID,
+                   let wordEntry = wordRepository.wordEntry(for: objectID) {
+                    EditWordView(word: wordEntry, dataManager: dataManager)
+                }
             }
         }
     }
 }
 
 struct WordRowView: View {
-    @ObservedObject var word: WordEntry
+    let word: WordDisplayModel
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Theme.Typography.title(word.word ?? "")
+                    Theme.Typography.title(word.word)
                         .font(.headline)
                         .foregroundColor(Theme.Colors.textPrimary)
                     
-                    Theme.Typography.body(word.translation ?? "")
+                    Theme.Typography.body(word.translation)
                         .foregroundColor(Theme.Colors.textSecondary)
                 }
                 
@@ -131,7 +143,7 @@ struct WordRowView: View {
                         }
                     }
                     
-                    Text(word.language ?? "")
+                    Text(word.language)
                         .font(.caption)
                         .fontWeight(.medium)
                         .padding(.horizontal, 8)
