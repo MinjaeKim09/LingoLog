@@ -2,6 +2,8 @@ import SwiftUI
 
 struct StoryHomeView: View {
     @ObservedObject var viewModel: StoryViewModel
+    @ObservedObject var storeManager: StoreManager = .shared
+    @State private var showingPaywall = false
     
     var body: some View {
         NavigationView {
@@ -50,6 +52,9 @@ struct StoryHomeView: View {
             }
         }
         .navigationViewStyle(.stack)
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView(storeManager: storeManager)
+        }
     }
     
     // MARK: - API Not Configured View
@@ -212,11 +217,19 @@ struct StoryHomeView: View {
                 }
                 
                 Button(action: {
-                    viewModel.selectStory(story)
+                    if storeManager.isStoryUnlocked {
+                        viewModel.selectStory(story)
+                    } else {
+                        showingPaywall = true
+                    }
                 }) {
                     HStack {
-                        Image(systemName: "book.fill")
-                        Text("Read Story")
+                        if !storeManager.isStoryUnlocked {
+                            Image(systemName: "lock.fill")
+                        } else {
+                            Image(systemName: "book.fill")
+                        }
+                        Text(storeManager.isStoryUnlocked ? "Read Story" : "Unlock Stories")
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -247,18 +260,27 @@ struct StoryHomeView: View {
             }
             
             Button(action: {
-                Task {
-                    await viewModel.loadOrGenerateStory()
+                if storeManager.isStoryUnlocked {
+                    Task {
+                        await viewModel.loadOrGenerateStory()
+                    }
+                } else {
+                    showingPaywall = true
                 }
             }) {
                 HStack {
-                    Image(systemName: "wand.and.stars")
-                    Text("Generate Story")
+                    if !storeManager.isStoryUnlocked {
+                        Image(systemName: "lock.fill")
+                        Text("Unlock Stories")
+                    } else {
+                        Image(systemName: "wand.and.stars")
+                        Text("Generate Story")
+                    }
                 }
                 .frame(maxWidth: .infinity)
             }
             .primaryButtonStyle()
-            .disabled(viewModel.wordsForSelectedLanguage.count < 3)
+            .disabled(storeManager.isStoryUnlocked && viewModel.wordsForSelectedLanguage.count < 3)
             .opacity(viewModel.wordsForSelectedLanguage.count < 3 ? 0.5 : 1.0)
             
             if viewModel.wordsForSelectedLanguage.count < 3 {

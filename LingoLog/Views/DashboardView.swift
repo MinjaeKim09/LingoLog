@@ -35,8 +35,8 @@ struct DashboardView: View {
                     // Welcome Section
 
                     VStack(spacing: 8) {
-                        if !userManager.userName.isEmpty {
-                            Theme.Typography.display("Welcome, \(userManager.userName)")
+                        if !userManager.displayName.isEmpty {
+                            Theme.Typography.display("Welcome, \(userManager.displayName)")
                                 .foregroundStyle(Theme.Colors.textPrimary)
                                 .multilineTextAlignment(.center)
                         } else {
@@ -120,7 +120,7 @@ struct DashboardView: View {
                 )
             }
             .sheet(isPresented: $showingOnboarding) {
-                NameOnboardingView(userManager: userManager)
+                AuthenticationView(userManager: userManager)
             }
         }
         .onAppear {

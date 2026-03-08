@@ -1,0 +1,35 @@
+{
+  "identifier" : "D7C7E4A0-4B2A-4F8E-9D1C-3E5F7A9B1C3D",
+  "nonRenewableSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "A1B2C3D4-E5F6-7890-ABCD-EF1234567890",
+      "localizations" : [
+        {
+          "description" : "Unlock AI-generated daily stories with comprehension quizzes. One-time purchase.",
+          "displayName" : "Daily Stories",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.lingolog.dailystories",
+      "referenceName" : "Daily Stories",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "0",
+    "_developerTeamID" : "5699GDC3LT",
+    "_lastSynchronizedDate" : "2026-03-07T20:00:00Z"
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

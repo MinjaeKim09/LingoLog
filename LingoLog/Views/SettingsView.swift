@@ -3,17 +3,21 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var dataManager: DataManager
     @ObservedObject var userManager: UserManager
+    @ObservedObject var storeManager: StoreManager
     let wordRepository: WordRepository
     @StateObject private var viewModel: SettingsViewModel
     @State private var showingResetAlert = false
     @State private var showingExportSheet = false
     @State private var showingNotificationSettingsAlert = false
+    @State private var showingDeleteAccountAlert = false
+    @State private var showingAuthSheet = false
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
     
-    init(wordRepository: WordRepository, dataManager: DataManager, userManager: UserManager) {
+    init(wordRepository: WordRepository, dataManager: DataManager, userManager: UserManager, storeManager: StoreManager = .shared) {
         self.wordRepository = wordRepository
         self.dataManager = dataManager
         self.userManager = userManager
+        self.storeManager = storeManager
         _viewModel = StateObject(wrappedValue: SettingsViewModel(wordRepository: wordRepository))
     }
     
@@ -37,17 +41,10 @@ struct SettingsView: View {
                 VStack(spacing: 24) {
                     
                     // Profile Section
-                    SettingsSection(title: "Profile") {
-                        TextField("Your Name", text: $userManager.userName)
-                            .textFieldStyle(RoundedBorderTextFieldStyle()) // Simple style for now, or custom
-                            // Let's use a cleaner unstyled textfield with standard font
-                        
-                        if userManager.userName.isEmpty {
-                             Text("Enter your name to personalize your experience.")
-                                .font(.caption)
-                                .foregroundColor(Theme.Colors.textSecondary)
-                        }
-                    }
+                    profileSection
+                    
+                    // Purchases Section
+                    purchasesSection
                     
                     // Statistics Section
                     SettingsSection(title: "Statistics") {
@@ -71,7 +68,6 @@ struct SettingsView: View {
                                     .font(.caption)
                                     .foregroundColor(Theme.Colors.textSecondary)
                             }
-                            // Don't add divider for the last item - simplified for now
                             if stat.id != viewModel.languageStats.last?.id {
                                 Divider().background(Theme.Colors.divider)
                             }
@@ -127,6 +123,19 @@ struct SettingsView: View {
                         }
                     }
                     
+                    // Account Section (if signed in)
+                    if userManager.isAuthenticated {
+                        SettingsSection(title: "Account") {
+                            Button(action: { showingDeleteAccountAlert = true }) {
+                                HStack {
+                                    Image(systemName: "person.crop.circle.badge.xmark")
+                                    Theme.Typography.body("Delete Account")
+                                }
+                                .foregroundColor(Theme.Colors.error)
+                            }
+                        }
+                    }
+                    
                     // About Section
                     SettingsSection(title: "About") {
                         HStack {
@@ -173,6 +182,14 @@ struct SettingsView: View {
             } message: {
                 Text("This will permanently delete all your words and progress. This action cannot be undone.")
             }
+            .alert("Delete Account", isPresented: $showingDeleteAccountAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    userManager.deleteAccount()
+                }
+            } message: {
+                Text("This will delete your account and all associated data. This action cannot be undone.")
+            }
             .alert("Notifications Disabled", isPresented: $showingNotificationSettingsAlert) {
                 Button("Open Settings") {
                     NotificationManager.shared.openAppSettings()
@@ -184,6 +201,167 @@ struct SettingsView: View {
             .sheet(isPresented: $showingExportSheet) {
                 ExportDataView(dataManager: dataManager)
             }
+            .sheet(isPresented: $showingAuthSheet) {
+                AuthenticationView(userManager: userManager)
+            }
+        }
+    }
+    
+    // MARK: - Profile Section
+    
+    @ViewBuilder
+    private var profileSection: some View {
+        SettingsSection(title: "Profile") {
+            if userManager.isAuthenticated {
+                // Signed In View
+                VStack(spacing: 12) {
+                    HStack(spacing: 14) {
+                        // Provider Badge
+                        ZStack {
+                            Circle()
+                                .fill(Theme.Colors.accent.opacity(0.1))
+                                .frame(width: 44, height: 44)
+                            
+                            Image(systemName: providerIcon)
+                                .font(.title3)
+                                .foregroundStyle(Theme.Colors.accent)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(userManager.displayName.isEmpty ? "User" : userManager.displayName)
+                                .font(.headline)
+                                .foregroundStyle(Theme.Colors.textPrimary)
+                            
+                            if let email = userManager.userEmail {
+                                Text(email)
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                            }
+                            
+                            Text("Signed in with \(providerName)")
+                                .font(.caption2)
+                                .foregroundStyle(Theme.Colors.secondaryAccent)
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    Divider().background(Theme.Colors.divider)
+                    
+                    Button(action: {
+                        userManager.signOut()
+                    }) {
+                        HStack {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                            Theme.Typography.body("Sign Out")
+                        }
+                        .foregroundColor(Theme.Colors.error)
+                    }
+                }
+            } else {
+                // Guest View
+                VStack(spacing: 12) {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(Theme.Colors.textSecondary.opacity(0.1))
+                                .frame(width: 44, height: 44)
+                            
+                            Image(systemName: "person.fill.questionmark")
+                                .font(.title3)
+                                .foregroundStyle(Theme.Colors.textSecondary)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Guest Mode")
+                                .font(.headline)
+                                .foregroundStyle(Theme.Colors.textPrimary)
+                            
+                            Text("Sign in to save your progress")
+                                .font(.caption)
+                                .foregroundStyle(Theme.Colors.textSecondary)
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    // Editable name for guest
+                    TextField("Your Name", text: $userManager.displayName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    
+                    Divider().background(Theme.Colors.divider)
+                    
+                    Button(action: {
+                        showingAuthSheet = true
+                    }) {
+                        HStack {
+                            Image(systemName: "person.crop.circle.badge.plus")
+                            Theme.Typography.body("Sign In")
+                        }
+                        .foregroundColor(Theme.Colors.accent)
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Purchases Section
+    
+    @ViewBuilder
+    private var purchasesSection: some View {
+        SettingsSection(title: "Purchases") {
+            HStack {
+                Image(systemName: storeManager.isStoryUnlocked ? "checkmark.circle.fill" : "lock.fill")
+                    .foregroundStyle(storeManager.isStoryUnlocked ? Theme.Colors.success : Theme.Colors.textSecondary)
+                
+                Theme.Typography.body("Daily Stories")
+                    .foregroundColor(Theme.Colors.textPrimary)
+                
+                Spacer()
+                
+                if storeManager.isStoryUnlocked {
+                    Text("Unlocked")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Theme.Colors.success)
+                } else {
+                    Text("Locked")
+                        .font(.caption)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+            }
+            
+            if !storeManager.isStoryUnlocked {
+                Divider().background(Theme.Colors.divider)
+                
+                Button(action: {
+                    Task { await storeManager.restorePurchases() }
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.clockwise")
+                        Theme.Typography.body("Restore Purchases")
+                    }
+                    .foregroundColor(Theme.Colors.accent)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helpers
+    
+    private var providerIcon: String {
+        switch userManager.authProvider {
+        case .apple: return "applelogo"
+        case .google: return "g.circle.fill"
+        default: return "person.fill"
+        }
+    }
+    
+    private var providerName: String {
+        switch userManager.authProvider {
+        case .apple: return "Apple"
+        case .google: return "Google"
+        default: return "Unknown"
         }
     }
     
@@ -373,4 +551,4 @@ struct ExportDataView: View {
             userManager: UserManager.shared
         )
     }
-} 
+}

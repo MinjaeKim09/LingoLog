@@ -13,6 +13,7 @@ struct ContentView: View {
     let storyRepository: StoryRepository
     let userManager: UserManager
     let translationService: TranslationService
+    @ObservedObject var storeManager: StoreManager = .shared
     
     var body: some View {
         TabView {
@@ -58,7 +59,8 @@ struct ContentView: View {
             SettingsView(
                 wordRepository: wordRepository,
                 dataManager: dataManager,
-                userManager: userManager
+                userManager: userManager,
+                storeManager: storeManager
             )
                 .tabItem {
                     Image(systemName: "gear")

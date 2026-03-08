@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		7B7036FB2F5D051A0022C63C /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7B7036FA2F5D051A0022C63C /* FirebaseAuth */; };
+		7B70377A2F5D07800022C63C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 7B7037792F5D07800022C63C /* GoogleSignIn */; };
+		7B70377C2F5D07800022C63C /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 7B70377B2F5D07800022C63C /* GoogleSignInSwift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		7B8B466D2E028A4C00CF6693 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,9 +35,22 @@
 		7B8B46762E028A4C00CF6693 /* LingoLogUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LingoLogUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		7B7037FA2F5D0B730022C63C /* Exceptions for "LingoLog" folder in "LingoLog" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 7B8B465E2E028A4B00CF6693 /* LingoLog */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7B8B46612E028A4B00CF6693 /* LingoLog */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7B7037FA2F5D0B730022C63C /* Exceptions for "LingoLog" folder in "LingoLog" target */,
+			);
 			path = LingoLog;
 			sourceTree = "<group>";
 		};
@@ -52,6 +71,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7B70377C2F5D07800022C63C /* GoogleSignInSwift in Frameworks */,
+				7B7036FB2F5D051A0022C63C /* FirebaseAuth in Frameworks */,
+				7B70377A2F5D07800022C63C /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +134,9 @@
 			);
 			name = LingoLog;
 			packageProductDependencies = (
+				7B7036FA2F5D051A0022C63C /* FirebaseAuth */,
+				7B7037792F5D07800022C63C /* GoogleSignIn */,
+				7B70377B2F5D07800022C63C /* GoogleSignInSwift */,
 			);
 			productName = LingoLog;
 			productReference = 7B8B465F2E028A4B00CF6693 /* LingoLog.app */;
@@ -195,6 +220,10 @@
 			);
 			mainGroup = 7B8B46562E028A4B00CF6693;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7B7036F92F5D051A0022C63C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				7B7037782F5D07800022C63C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7B8B46602E028A4B00CF6693 /* Products */;
 			projectDirPath = "";
@@ -399,12 +428,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 5699GDC3LT;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -427,12 +452,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 5699GDC3LT;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -558,6 +579,43 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7B7036F92F5D051A0022C63C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.10.0;
+			};
+		};
+		7B7037782F5D07800022C63C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7B7036FA2F5D051A0022C63C /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7B7036F92F5D051A0022C63C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		7B7037792F5D07800022C63C /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7B7037782F5D07800022C63C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		7B70377B2F5D07800022C63C /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7B7037782F5D07800022C63C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7B8B46572E028A4B00CF6693 /* Project object */;
 }
