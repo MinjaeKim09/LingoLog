@@ -167,7 +167,8 @@ final class StoryViewModel: ObservableObject {
             let response = try await geminiService.generateStory(
                 words: selectedWords,
                 language: selectedLanguage,
-                languageName: languageName
+                languageName: languageName,
+                subscriptionJWS: StoreManager.shared.latestSubscriptionJWS
             )
             
             // Save the story

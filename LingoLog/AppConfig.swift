@@ -15,6 +15,10 @@ struct AppConfig {
         url(forKey: "TermsOfServiceURL")
     }
     
+    static var dailyStoriesFunctionURL: URL? {
+        url(forKey: "DailyStoriesFunctionURL")
+    }
+    
     private static func url(forKey key: String) -> URL? {
         guard let value = value(forKey: key), !value.isEmpty else { return nil }
         return URL(string: value)

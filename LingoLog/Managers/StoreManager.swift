@@ -1,5 +1,6 @@
 import Foundation
 import StoreKit
+import UIKit
 import os
 
 @MainActor
@@ -8,30 +9,31 @@ final class StoreManager: ObservableObject {
     
     // MARK: - Product IDs
     
-    static let dailyStoriesProductID = "com.lingolog.dailystories"
+    static let dailyStoriesMonthlyProductID = "com.lingolog.dailystories.monthly"
     
     // MARK: - Published State
     
-    @Published private(set) var isStoryUnlocked: Bool = false
+    @Published private(set) var isDailyStoriesActive: Bool = false
     @Published private(set) var dailyStoriesProduct: Product?
     @Published private(set) var purchaseError: String?
     @Published private(set) var isPurchasing: Bool = false
+    @Published private(set) var latestSubscriptionJWS: String?
+    
+    var isStoryUnlocked: Bool {
+        isDailyStoriesActive
+    }
     
     // MARK: - Private
     
-    private var transactionListener: Task<Void, Error>?
+    private var transactionListener: Task<Void, Never>?
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "LingoLog", category: "store")
     
     // MARK: - Init
     
     private init() {
-        // Check persisted purchase state immediately
-        isStoryUnlocked = UserDefaults.standard.bool(forKey: "isStoryUnlocked")
-        
-        // Start listening for transactions
+        isDailyStoriesActive = UserDefaults.standard.bool(forKey: "dailyStoriesSubscriptionActive")
         transactionListener = listenForTransactions()
         
-        // Verify entitlements on launch
         Task {
             await verifyEntitlements()
             await fetchProducts()
@@ -46,12 +48,12 @@ final class StoreManager: ObservableObject {
     
     func fetchProducts() async {
         do {
-            let products = try await Product.products(for: [Self.dailyStoriesProductID])
+            let products = try await Product.products(for: [Self.dailyStoriesMonthlyProductID])
             if let product = products.first {
                 dailyStoriesProduct = product
-                logger.info("Fetched product: \(product.displayName) — \(product.displayPrice)")
+                logger.info("Fetched product: \(product.displayName) - \(product.displayPrice)")
             } else {
-                logger.warning("Daily stories product not found in store.")
+                logger.warning("Daily Stories subscription product not found.")
             }
         } catch {
             logger.error("Failed to fetch products: \(error.localizedDescription, privacy: .public)")
@@ -62,7 +64,7 @@ final class StoreManager: ObservableObject {
     
     func purchase() async {
         guard let product = dailyStoriesProduct else {
-            purchaseError = "Product not available. Please try again later."
+            purchaseError = "Subscription is not available. Please try again later."
             return
         }
         
@@ -75,15 +77,15 @@ final class StoreManager: ObservableObject {
             switch result {
             case .success(let verification):
                 let transaction = try checkVerified(verification)
+                await apply(transaction, jwsRepresentation: verification.jwsRepresentation)
                 await transaction.finish()
-                unlockStories()
-                logger.info("Purchase successful!")
+                logger.info("Subscription purchase successful.")
                 
             case .userCancelled:
-                logger.info("User cancelled purchase.")
+                logger.info("User cancelled subscription purchase.")
                 
             case .pending:
-                logger.info("Purchase pending (e.g. Ask to Buy).")
+                logger.info("Subscription purchase pending.")
                 
             @unknown default:
                 logger.warning("Unknown purchase result.")
@@ -96,7 +98,7 @@ final class StoreManager: ObservableObject {
         isPurchasing = false
     }
     
-    // MARK: - Restore Purchases
+    // MARK: - Restore + Manage
     
     func restorePurchases() async {
         isPurchasing = true
@@ -106,8 +108,8 @@ final class StoreManager: ObservableObject {
             try await AppStore.sync()
             await verifyEntitlements()
             
-            if !isStoryUnlocked {
-                purchaseError = "No previous purchase found."
+            if !isDailyStoriesActive {
+                purchaseError = "No active Daily Stories subscription found."
             }
         } catch {
             purchaseError = "Failed to restore purchases: \(error.localizedDescription)"
@@ -117,23 +119,36 @@ final class StoreManager: ObservableObject {
         isPurchasing = false
     }
     
+    func manageSubscriptions() async {
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive })
+        else {
+            purchaseError = "Unable to open subscription management right now."
+            return
+        }
+        
+        do {
+            try await AppStore.showManageSubscriptions(in: scene)
+        } catch {
+            purchaseError = "Unable to open subscription management: \(error.localizedDescription)"
+            logger.error("Manage subscriptions failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+    
     // MARK: - Transaction Listener
     
-    private func listenForTransactions() -> Task<Void, Error> {
-        return Task.detached { [weak self] in
+    private func listenForTransactions() -> Task<Void, Never> {
+        Task { [weak self] in
             for await result in Transaction.updates {
                 do {
-                    let transaction = try await MainActor.run {
-                        try self?.checkVerified(result)
-                    }
-                    if let transaction = transaction {
+                    let transaction = try self?.checkVerified(result)
+                    if let transaction {
+                        await self?.apply(transaction, jwsRepresentation: result.jwsRepresentation)
                         await transaction.finish()
-                        await self?.unlockStories()
                     }
                 } catch {
-                    await MainActor.run {
-                        self?.logger.error("Transaction verification failed: \(error.localizedDescription, privacy: .public)")
-                    }
+                    self?.logger.error("Transaction verification failed: \(error.localizedDescription, privacy: .public)")
                 }
             }
         }
@@ -150,24 +165,59 @@ final class StoreManager: ObservableObject {
         }
     }
     
-    private func verifyEntitlements() async {
+    func verifyEntitlements() async {
+        var activeTransaction: Transaction?
+        var activeJWS: String?
+        
         for await result in Transaction.currentEntitlements {
             do {
                 let transaction = try checkVerified(result)
-                if transaction.productID == Self.dailyStoriesProductID {
-                    unlockStories()
-                    return
+                if isActiveDailyStoriesTransaction(transaction) {
+                    activeTransaction = transaction
+                    activeJWS = result.jwsRepresentation
+                    break
                 }
             } catch {
                 logger.error("Entitlement verification failed: \(error.localizedDescription, privacy: .public)")
             }
         }
+        
+        if let activeTransaction {
+            applyActive(transaction: activeTransaction, jwsRepresentation: activeJWS)
+        } else {
+            applyInactive()
+        }
     }
     
-    // MARK: - Unlock
+    private func apply(_ transaction: Transaction, jwsRepresentation: String?) async {
+        if isActiveDailyStoriesTransaction(transaction) {
+            applyActive(transaction: transaction, jwsRepresentation: jwsRepresentation)
+        } else if transaction.productID == Self.dailyStoriesMonthlyProductID {
+            await verifyEntitlements()
+        }
+    }
     
-    private func unlockStories() {
-        isStoryUnlocked = true
-        UserDefaults.standard.set(true, forKey: "isStoryUnlocked")
+    private func isActiveDailyStoriesTransaction(_ transaction: Transaction) -> Bool {
+        guard transaction.productID == Self.dailyStoriesMonthlyProductID else { return false }
+        guard transaction.revocationDate == nil else { return false }
+        
+        if let expirationDate = transaction.expirationDate {
+            return expirationDate > Date()
+        }
+        
+        return true
+    }
+    
+    private func applyActive(transaction: Transaction, jwsRepresentation: String?) {
+        isDailyStoriesActive = true
+        latestSubscriptionJWS = jwsRepresentation
+        UserDefaults.standard.set(true, forKey: "dailyStoriesSubscriptionActive")
+    }
+    
+    private func applyInactive() {
+        isDailyStoriesActive = false
+        latestSubscriptionJWS = nil
+        UserDefaults.standard.set(false, forKey: "dailyStoriesSubscriptionActive")
+        UserDefaults.standard.removeObject(forKey: "isStoryUnlocked")
     }
 }

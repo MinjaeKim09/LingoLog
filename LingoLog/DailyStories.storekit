@@ -4,29 +4,45 @@
 
   ],
   "products" : [
-    {
-      "displayPrice" : "4.99",
-      "familyShareable" : false,
-      "internalID" : "A1B2C3D4-E5F6-7890-ABCD-EF1234567890",
-      "localizations" : [
-        {
-          "description" : "Unlock AI-generated daily stories with comprehension quizzes. One-time purchase.",
-          "displayName" : "Daily Stories",
-          "locale" : "en_US"
-        }
-      ],
-      "productID" : "com.lingolog.dailystories",
-      "referenceName" : "Daily Stories",
-      "type" : "NonConsumable"
-    }
+
   ],
   "settings" : {
     "_applicationInternalID" : "0",
     "_developerTeamID" : "5699GDC3LT",
-    "_lastSynchronizedDate" : "2026-03-07T20:00:00Z"
+    "_lastSynchronizedDate" : "2026-07-03T00:00:00Z"
   },
   "subscriptionGroups" : [
-
+    {
+      "id" : "D8F9C2E2-627B-4A57-BB97-53EF9013C4C1",
+      "localizations" : [
+        {
+          "displayName" : "Daily Stories",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "Daily Stories",
+      "subscriptions" : [
+        {
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupLevel" : 1,
+          "internalID" : "B4A1D97A-37BC-48F3-9E05-B2B43E0996D8",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Generate one AI-powered story each day using your saved vocabulary.",
+              "displayName" : "Daily Stories Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.lingolog.dailystories.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Daily Stories Monthly",
+          "subscriptionGroupID" : "D8F9C2E2-627B-4A57-BB97-53EF9013C4C1",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
   ],
   "version" : {
     "major" : 4,

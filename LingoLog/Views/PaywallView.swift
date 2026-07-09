@@ -3,7 +3,6 @@ import SwiftUI
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var storeManager: StoreManager
-    @State private var showingRestoreConfirmation = false
     
     var body: some View {
         ZStack {
@@ -47,12 +46,13 @@ struct PaywallView: View {
                     
                     // Title
                     VStack(spacing: 8) {
-                        Theme.Typography.display("Unlock Daily Stories")
+                        Theme.Typography.display("Daily Stories")
                             .foregroundStyle(Theme.Colors.textPrimary)
                             .multilineTextAlignment(.center)
                         
-                        Theme.Typography.body("One-time purchase • Yours forever")
+                        Theme.Typography.body("Subscribe for AI-generated stories from your vocabulary")
                             .foregroundStyle(Theme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
                     }
                     
                     // Feature List
@@ -70,12 +70,12 @@ struct PaywallView: View {
                         FeatureRow(
                             icon: "calendar",
                             title: "Daily Fresh Content",
-                            subtitle: "New stories generated every day"
+                            subtitle: "Generate one new story each day"
                         )
                         FeatureRow(
-                            icon: "infinity",
-                            title: "Unlimited Access",
-                            subtitle: "One-time purchase, no subscription"
+                            icon: "lock.shield",
+                            title: "Private App Data",
+                            subtitle: "Your vocabulary stays saved on this device"
                         )
                     }
                     .padding(20)
@@ -92,8 +92,8 @@ struct PaywallView: View {
                                         ProgressView()
                                             .tint(.white)
                                     } else {
-                                        Image(systemName: "lock.open.fill")
-                                        Text("Unlock for \(product.displayPrice)")
+                                        Image(systemName: "sparkles")
+                                        Text("Subscribe for \(product.displayPrice) / month")
                                     }
                                 }
                                 .frame(maxWidth: .infinity)
@@ -119,11 +119,26 @@ struct PaywallView: View {
                         Button(action: {
                             Task { await storeManager.restorePurchases() }
                         }) {
-                            Text("Restore Purchase")
+                            Text("Restore Purchases")
                                 .font(.body)
                                 .foregroundStyle(Theme.Colors.accent)
                         }
                         .disabled(storeManager.isPurchasing)
+                        
+                        if let termsURL = AppConfig.termsOfServiceURL,
+                           let privacyURL = AppConfig.privacyPolicyURL {
+                            Text("Subscription renews monthly until canceled. Manage or cancel anytime in your Apple ID subscriptions.")
+                                .font(.caption2)
+                                .foregroundStyle(Theme.Colors.textSecondary)
+                                .multilineTextAlignment(.center)
+                            
+                            HStack(spacing: 12) {
+                                Link("Terms", destination: termsURL)
+                                Link("Privacy", destination: privacyURL)
+                            }
+                            .font(.caption2)
+                            .foregroundStyle(Theme.Colors.accent)
+                        }
                     }
                     
                     // Error
@@ -139,8 +154,8 @@ struct PaywallView: View {
                 .padding(.horizontal, 24)
             }
         }
-        .onChange(of: storeManager.isStoryUnlocked) { _, unlocked in
-            if unlocked {
+        .onChange(of: storeManager.isDailyStoriesActive) { _, active in
+            if active {
                 dismiss()
             }
         }

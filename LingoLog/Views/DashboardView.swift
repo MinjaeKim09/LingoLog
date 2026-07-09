@@ -8,7 +8,6 @@ struct DashboardView: View {
     @StateObject private var viewModel: DashboardViewModel
     @State private var showingAddWord = false
     @State private var showingQuiz = false
-    @State private var showingOnboarding = false
     
     init(
         wordRepository: WordRepository,
@@ -119,15 +118,9 @@ struct DashboardView: View {
                     dataManager: dataManager
                 )
             }
-            .sheet(isPresented: $showingOnboarding) {
-                AuthenticationView(userManager: userManager)
-            }
         }
         .onAppear {
             viewModel.refresh()
-            if userManager.shouldShowOnboarding {
-                showingOnboarding = true
-            }
         }
     }
 }

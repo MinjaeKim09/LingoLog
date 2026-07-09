@@ -9,8 +9,6 @@ struct SettingsView: View {
     @State private var showingResetAlert = false
     @State private var showingExportSheet = false
     @State private var showingNotificationSettingsAlert = false
-    @State private var showingDeleteAccountAlert = false
-    @State private var showingAuthSheet = false
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
     
     init(wordRepository: WordRepository, dataManager: DataManager, userManager: UserManager, storeManager: StoreManager = .shared) {
@@ -123,19 +121,6 @@ struct SettingsView: View {
                         }
                     }
                     
-                    // Account Section (if signed in)
-                    if userManager.isAuthenticated {
-                        SettingsSection(title: "Account") {
-                            Button(action: { showingDeleteAccountAlert = true }) {
-                                HStack {
-                                    Image(systemName: "person.crop.circle.badge.xmark")
-                                    Theme.Typography.body("Delete Account")
-                                }
-                                .foregroundColor(Theme.Colors.error)
-                            }
-                        }
-                    }
-                    
                     // About Section
                     SettingsSection(title: "About") {
                         HStack {
@@ -182,14 +167,6 @@ struct SettingsView: View {
             } message: {
                 Text("This will permanently delete all your words and progress. This action cannot be undone.")
             }
-            .alert("Delete Account", isPresented: $showingDeleteAccountAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Delete", role: .destructive) {
-                    userManager.deleteAccount()
-                }
-            } message: {
-                Text("This will delete your account and all associated data. This action cannot be undone.")
-            }
             .alert("Notifications Disabled", isPresented: $showingNotificationSettingsAlert) {
                 Button("Open Settings") {
                     NotificationManager.shared.openAppSettings()
@@ -201,9 +178,6 @@ struct SettingsView: View {
             .sheet(isPresented: $showingExportSheet) {
                 ExportDataView(dataManager: dataManager)
             }
-            .sheet(isPresented: $showingAuthSheet) {
-                AuthenticationView(userManager: userManager)
-            }
         }
     }
     
@@ -212,95 +186,33 @@ struct SettingsView: View {
     @ViewBuilder
     private var profileSection: some View {
         SettingsSection(title: "Profile") {
-            if userManager.isAuthenticated {
-                // Signed In View
-                VStack(spacing: 12) {
-                    HStack(spacing: 14) {
-                        // Provider Badge
-                        ZStack {
-                            Circle()
-                                .fill(Theme.Colors.accent.opacity(0.1))
-                                .frame(width: 44, height: 44)
-                            
-                            Image(systemName: providerIcon)
-                                .font(.title3)
-                                .foregroundStyle(Theme.Colors.accent)
-                        }
+            VStack(spacing: 12) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(Theme.Colors.textSecondary.opacity(0.1))
+                            .frame(width: 44, height: 44)
                         
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(userManager.displayName.isEmpty ? "User" : userManager.displayName)
-                                .font(.headline)
-                                .foregroundStyle(Theme.Colors.textPrimary)
-                            
-                            if let email = userManager.userEmail {
-                                Text(email)
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.Colors.textSecondary)
-                            }
-                            
-                            Text("Signed in with \(providerName)")
-                                .font(.caption2)
-                                .foregroundStyle(Theme.Colors.secondaryAccent)
-                        }
-                        
-                        Spacer()
+                        Image(systemName: "iphone")
+                            .font(.title3)
+                            .foregroundStyle(Theme.Colors.textSecondary)
                     }
                     
-                    Divider().background(Theme.Colors.divider)
-                    
-                    Button(action: {
-                        userManager.signOut()
-                    }) {
-                        HStack {
-                            Image(systemName: "rectangle.portrait.and.arrow.right")
-                            Theme.Typography.body("Sign Out")
-                        }
-                        .foregroundColor(Theme.Colors.error)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Local Profile")
+                            .font(.headline)
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                        
+                        Text("Your vocabulary and progress are saved on this device.")
+                            .font(.caption)
+                            .foregroundStyle(Theme.Colors.textSecondary)
                     }
+                    
+                    Spacer()
                 }
-            } else {
-                // Guest View
-                VStack(spacing: 12) {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            Circle()
-                                .fill(Theme.Colors.textSecondary.opacity(0.1))
-                                .frame(width: 44, height: 44)
-                            
-                            Image(systemName: "person.fill.questionmark")
-                                .font(.title3)
-                                .foregroundStyle(Theme.Colors.textSecondary)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Guest Mode")
-                                .font(.headline)
-                                .foregroundStyle(Theme.Colors.textPrimary)
-                            
-                            Text("Sign in to save your progress")
-                                .font(.caption)
-                                .foregroundStyle(Theme.Colors.textSecondary)
-                        }
-                        
-                        Spacer()
-                    }
-                    
-                    // Editable name for guest
-                    TextField("Your Name", text: $userManager.displayName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    
-                    Divider().background(Theme.Colors.divider)
-                    
-                    Button(action: {
-                        showingAuthSheet = true
-                    }) {
-                        HStack {
-                            Image(systemName: "person.crop.circle.badge.plus")
-                            Theme.Typography.body("Sign In")
-                        }
-                        .foregroundColor(Theme.Colors.accent)
-                    }
-                }
+                
+                TextField("Your Name", text: $userManager.displayName)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
             }
         }
     }
@@ -311,59 +223,62 @@ struct SettingsView: View {
     private var purchasesSection: some View {
         SettingsSection(title: "Purchases") {
             HStack {
-                Image(systemName: storeManager.isStoryUnlocked ? "checkmark.circle.fill" : "lock.fill")
-                    .foregroundStyle(storeManager.isStoryUnlocked ? Theme.Colors.success : Theme.Colors.textSecondary)
+                Image(systemName: storeManager.isDailyStoriesActive ? "checkmark.circle.fill" : "lock.fill")
+                    .foregroundStyle(storeManager.isDailyStoriesActive ? Theme.Colors.success : Theme.Colors.textSecondary)
                 
-                Theme.Typography.body("Daily Stories")
+                Theme.Typography.body("Daily Stories Subscription")
                     .foregroundColor(Theme.Colors.textPrimary)
                 
                 Spacer()
                 
-                if storeManager.isStoryUnlocked {
-                    Text("Unlocked")
+                if storeManager.isDailyStoriesActive {
+                    Text("Active")
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundStyle(Theme.Colors.success)
                 } else {
-                    Text("Locked")
+                    Text("Inactive")
                         .font(.caption)
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
             }
             
-            if !storeManager.isStoryUnlocked {
+            Divider().background(Theme.Colors.divider)
+            
+            Button(action: {
+                Task { await storeManager.restorePurchases() }
+            }) {
+                HStack {
+                    Image(systemName: "arrow.clockwise")
+                    Theme.Typography.body("Restore Purchases")
+                }
+                .foregroundColor(Theme.Colors.accent)
+            }
+            
+            if storeManager.isDailyStoriesActive {
                 Divider().background(Theme.Colors.divider)
                 
                 Button(action: {
-                    Task { await storeManager.restorePurchases() }
+                    Task { await storeManager.manageSubscriptions() }
                 }) {
                     HStack {
-                        Image(systemName: "arrow.clockwise")
-                        Theme.Typography.body("Restore Purchases")
+                        Image(systemName: "creditcard")
+                        Theme.Typography.body("Manage Subscription")
                     }
                     .foregroundColor(Theme.Colors.accent)
                 }
+            }
+            
+            if let error = storeManager.purchaseError {
+                Divider().background(Theme.Colors.divider)
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(Theme.Colors.error)
             }
         }
     }
     
     // MARK: - Helpers
-    
-    private var providerIcon: String {
-        switch userManager.authProvider {
-        case .apple: return "applelogo"
-        case .google: return "g.circle.fill"
-        default: return "person.fill"
-        }
-    }
-    
-    private var providerName: String {
-        switch userManager.authProvider {
-        case .apple: return "Apple"
-        case .google: return "Google"
-        default: return "Unknown"
-        }
-    }
     
     private func resetAllData() {
         for word in wordRepository.words {
