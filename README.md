@@ -21,7 +21,7 @@ LingoLog is a high-fidelity iOS application designed for intermediate language l
 
 | Dashboard | Add Word | Quiz |
 |:---------:|:--------:|:----:|
-| At-a-glance stats on your study streak and upcoming reviews | Real-time translation powered by Azure AI | Test your vocabulary with spaced repetition quizzes |
+| At-a-glance stats on your study streak and upcoming reviews | Real-time translation powered by Google Cloud Translation | Test your vocabulary with spaced repetition quizzes |
 
 ---
 
@@ -33,7 +33,7 @@ LingoLog is a high-fidelity iOS application designed for intermediate language l
 - **Smart Quizzing**: The app dynamically filters "Due for Review" words, ensuring you only study what you're about to forget.
 
 ### Context-Aware Learning
-- **Real-time Translation**: Integrated with **Azure AI Translator** for instant, accurate lookups.
+- **Real-time Translation**: Google Cloud Translation Basic v2, protected behind a Firebase HTTPS proxy.
 - **Context Tagging**: Users can record *where* they encountered a word (e.g., "In a restaurant menu in Seoul"), creating stronger mental associations.
 
 ### Native User Experience
@@ -49,7 +49,7 @@ LingoLog is built with a focus on clean code and modern iOS best practices:
 - **SwiftUI**: Utilizes a declarative UI approach with custom `ViewModifiers` for a consistent design system.
 - **Core Data**: Local-first persistence handling complex queries for SRS scheduling and distinctive language filtering.
 - **MVVM Architecture**: Ensures a clean separation between business logic, data management, and the view layer.
-- **Service-Oriented Design**: Encapsulated network logic for Azure AI services, featuring secure API key management and robust error handling.
+- **Service-Oriented Design**: Encapsulated network logic for Firebase-backed services, with provider API keys held server-side.
 
 ---
 
@@ -67,7 +67,8 @@ Implementing a performant "Next Review Date" calculation directly within Core Da
 
 ### Prerequisites
 - **Xcode 15+** (with iOS 17+ SDK)
-- **Azure Translator API Key** ([Get one here](https://azure.microsoft.com/en-us/products/ai-services/ai-translator))
+- A Firebase project with Cloud Functions and App Check configured
+- Google Cloud Translation API enabled, with an API key stored as a Firebase Functions secret
 
 ### Setup
 
@@ -77,15 +78,21 @@ Implementing a performant "Next Review Date" calculation directly within Core Da
    cd LingoLog
    ```
 
-2. **Configure your API key:**
+2. **Configure Firebase services:**
    - Copy the example secrets file:
      ```bash
      cp LingoLog/Secrets.plist.example LingoLog/Secrets.plist
      ```
-   - Open `LingoLog/Secrets.plist` and replace `YOUR_AZURE_TRANSLATOR_API_KEY_HERE` with your actual Azure Translator API key.
+   - Deploy the Firebase Functions after setting `GOOGLE_TRANSLATE_API_KEY` as a Firebase secret and configuring `TRANSLATION_APP_ID`. See [`functions/README.md`](functions/README.md) for the exact endpoint contract and App Check setup.
+   - Set `TranslationFunctionURL` to the deployed `translation` function URL. The app contains no translation-provider API key.
    - **Note:** `Secrets.plist` is in `.gitignore` and will not be committed to version control.
 
-3. **Open and run:**
+3. **Retire Azure safely:**
+   - Deploy and validate the Firebase translation proxy first, then ship the app version that uses it.
+   - Monitor function errors and Google usage after release.
+   - Revoke the Azure Translator key only after the migration window for older app versions has closed.
+
+4. **Open and run:**
    - Open `LingoLog.xcodeproj` in Xcode.
    - Select your target device or simulator.
    - Build and Run (⌘R).

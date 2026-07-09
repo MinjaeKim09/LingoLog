@@ -7,12 +7,18 @@
 
 import SwiftUI
 import UserNotifications
+import FirebaseAppCheck
 import FirebaseCore
 import GoogleSignIn
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        #if DEBUG
+        AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
+        #else
+        AppCheck.setAppCheckProviderFactory(DeviceCheckProviderFactory())
+        #endif
         FirebaseApp.configure()
         return true
     }
@@ -83,4 +89,3 @@ struct LingoLogApp: App {
         )
     }
 }
-

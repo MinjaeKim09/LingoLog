@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		7B7036FB2F5D051A0022C63C /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7B7036FA2F5D051A0022C63C /* FirebaseAuth */; };
+		7B7038012F5D20000022C63C /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = 7B7038002F5D20000022C63C /* FirebaseAppCheck */; };
 		7B70377A2F5D07800022C63C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 7B7037792F5D07800022C63C /* GoogleSignIn */; };
 		7B70377C2F5D07800022C63C /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 7B70377B2F5D07800022C63C /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
@@ -71,6 +72,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7B7038012F5D20000022C63C /* FirebaseAppCheck in Frameworks */,
 				7B70377C2F5D07800022C63C /* GoogleSignInSwift in Frameworks */,
 				7B7036FB2F5D051A0022C63C /* FirebaseAuth in Frameworks */,
 				7B70377A2F5D07800022C63C /* GoogleSignIn in Frameworks */,
@@ -134,6 +136,7 @@
 			);
 			name = LingoLog;
 			packageProductDependencies = (
+				7B7038002F5D20000022C63C /* FirebaseAppCheck */,
 				7B7036FA2F5D051A0022C63C /* FirebaseAuth */,
 				7B7037792F5D07800022C63C /* GoogleSignIn */,
 				7B70377B2F5D07800022C63C /* GoogleSignInSwift */,
@@ -604,6 +607,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7B7036F92F5D051A0022C63C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseAuth;
+		};
+		7B7038002F5D20000022C63C /* FirebaseAppCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7B7036F92F5D051A0022C63C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAppCheck;
 		};
 		7B7037792F5D07800022C63C /* GoogleSignIn */ = {
 			isa = XCSwiftPackageProductDependency;

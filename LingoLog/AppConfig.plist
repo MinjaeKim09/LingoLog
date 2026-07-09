@@ -8,5 +8,7 @@
 	<string></string>
 	<key>DailyStoriesFunctionURL</key>
 	<string></string>
+	<key>TranslationFunctionURL</key>
+	<string></string>
 </dict>
 </plist>

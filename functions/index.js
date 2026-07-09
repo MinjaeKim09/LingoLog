@@ -1,6 +1,8 @@
 "use strict";
 
+const { createHash } = require("node:crypto");
 const admin = require("firebase-admin");
+const { getAppCheck } = require("firebase-admin/app-check");
 const { FieldValue } = require("firebase-admin/firestore");
 const { onRequest } = require("firebase-functions/v2/https");
 const { defineSecret, defineString } = require("firebase-functions/params");
@@ -8,12 +10,20 @@ const {
   Environment,
   SignedDataVerifier,
 } = require("@apple/app-store-server-library");
+const {
+  clientError: translationClientError,
+  fetchSupportedLanguages,
+  translateWithGoogle,
+  validateTranslationRequest,
+} = require("./translation");
 
 admin.initializeApp();
 
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 const APPLE_ROOT_CERT_BASE64 = defineSecret("APPLE_ROOT_CERT_BASE64");
+const GOOGLE_TRANSLATE_API_KEY = defineSecret("GOOGLE_TRANSLATE_API_KEY");
 const BUNDLE_ID = defineString("BUNDLE_ID", { default: "mkim.LingoLog" });
+const TRANSLATION_APP_ID = defineString("TRANSLATION_APP_ID");
 const APPLE_APP_ID = defineString("APPLE_APP_ID", { default: "" });
 const APP_STORE_ENVIRONMENT = defineString("APP_STORE_ENVIRONMENT", {
   default: "Sandbox",
@@ -25,6 +35,11 @@ const DEV_SKIP_APPLE_VERIFICATION = defineString("DEV_SKIP_APPLE_VERIFICATION", 
 const DAILY_STORIES_PRODUCT_ID = "com.lingolog.dailystories.monthly";
 const GEMINI_MODEL_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
+const TRANSLATION_RATE_LIMIT = 60;
+const TRANSLATION_RATE_WINDOW_MS = 60 * 1000;
+const LANGUAGE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+let cachedGoogleLanguages = null;
+let cachedGoogleLanguagesExpiresAt = 0;
 
 exports.generateDailyStory = onRequest(
   {
@@ -63,6 +78,126 @@ exports.generateDailyStory = onRequest(
     }
   }
 );
+
+exports.translation = onRequest(
+  {
+    cors: true,
+    secrets: [GOOGLE_TRANSLATE_API_KEY],
+    timeoutSeconds: 20,
+    memory: "256MiB",
+  },
+  async (req, res) => {
+    try {
+      if (req.method !== "GET" && req.method !== "POST") {
+        res.status(405).json({ error: "Use GET for languages or POST for translation." });
+        return;
+      }
+
+      const appId = await verifiedTranslationAppId(req);
+      await reserveTranslationRateLimit(appId);
+
+      if (req.method === "GET") {
+        res.status(200).json({ languages: await supportedGoogleLanguages() });
+        return;
+      }
+
+      const payload = validateTranslationRequest(req.body);
+      const supportedLanguages = await supportedGoogleLanguages();
+      const supportedCodes = new Map(
+        supportedLanguages.map((language) => [language.code.toLowerCase(), language.code])
+      );
+      const sourceLanguage = supportedCodes.get(payload.sourceLanguage.toLowerCase());
+      const targetLanguage = supportedCodes.get(payload.targetLanguage.toLowerCase());
+      if (!sourceLanguage || !targetLanguage) {
+        throw translationClientError("The selected language is not supported.");
+      }
+
+      if (sourceLanguage === targetLanguage) {
+        res.status(200).json({ translatedText: payload.text });
+        return;
+      }
+
+      const translatedText = await translateWithGoogle(GOOGLE_TRANSLATE_API_KEY.value(), {
+        ...payload,
+        sourceLanguage,
+        targetLanguage,
+      });
+      res.status(200).json({ translatedText });
+    } catch (error) {
+      const status = error.statusCode || 500;
+      if (status >= 500) {
+        console.error("Translation request failed.", error);
+      }
+      res.status(status).json({ error: translationErrorMessage(error) });
+    }
+  }
+);
+
+async function verifiedTranslationAppId(req) {
+  const token = stringValue(req.get("X-Firebase-AppCheck"));
+  if (!token) {
+    throw translationClientError("A valid app attestation is required.", 401);
+  }
+
+  try {
+    const decodedToken = await getAppCheck().verifyToken(token);
+    if (decodedToken.appId !== TRANSLATION_APP_ID.value()) {
+      throw translationClientError("A valid app attestation is required.", 401);
+    }
+    return decodedToken.appId;
+  } catch (error) {
+    if (error.statusCode) {
+      throw error;
+    }
+    throw translationClientError("A valid app attestation is required.", 401);
+  }
+}
+
+async function reserveTranslationRateLimit(appId) {
+  const appHash = createHash("sha256").update(appId).digest("hex");
+  const rateLimitRef = admin.firestore().collection("translationRateLimits").doc(appHash);
+  const now = Date.now();
+
+  await admin.firestore().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(rateLimitRef);
+    const current = snapshot.exists ? snapshot.data() : null;
+    const windowStartedAt = Number(current && current.windowStartedAt) || now;
+    const isCurrentWindow = now - windowStartedAt < TRANSLATION_RATE_WINDOW_MS;
+    const count = isCurrentWindow ? Number(current && current.count) || 0 : 0;
+
+    if (count >= TRANSLATION_RATE_LIMIT) {
+      throw translationClientError("Too many translation requests. Please try again shortly.", 429);
+    }
+
+    transaction.set(
+      rateLimitRef,
+      {
+        count: count + 1,
+        windowStartedAt: isCurrentWindow ? windowStartedAt : now,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  });
+}
+
+async function supportedGoogleLanguages() {
+  if (cachedGoogleLanguages && Date.now() < cachedGoogleLanguagesExpiresAt) {
+    return cachedGoogleLanguages;
+  }
+
+  const languages = await fetchSupportedLanguages(GOOGLE_TRANSLATE_API_KEY.value());
+  cachedGoogleLanguages = languages;
+  cachedGoogleLanguagesExpiresAt = Date.now() + LANGUAGE_CACHE_TTL_MS;
+  return languages;
+}
+
+function translationErrorMessage(error) {
+  if (error.statusCode && error.statusCode < 500) {
+    return error.message;
+  }
+  return "Translation is temporarily unavailable. Please try again later.";
+}
 
 function validateRequest(body) {
   const subscriptionJWS = stringValue(body.subscriptionJWS);

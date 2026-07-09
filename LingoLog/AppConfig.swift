@@ -10,13 +10,14 @@ struct AppConfig {
     static var privacyPolicyURL: URL? {
         url(forKey: "PrivacyPolicyURL")
     }
-    
     static var termsOfServiceURL: URL? {
         url(forKey: "TermsOfServiceURL")
     }
-    
     static var dailyStoriesFunctionURL: URL? {
         url(forKey: "DailyStoriesFunctionURL")
+    }
+    static var translationFunctionURL: URL? {
+        url(forKey: "TranslationFunctionURL")
     }
     
     private static func url(forKey key: String) -> URL? {
