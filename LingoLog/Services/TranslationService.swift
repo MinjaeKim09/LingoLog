@@ -75,21 +75,9 @@ final class TranslationService {
     private(set) var cachedLanguages: [Language] = []
 
     private init() {
-        if let configURL = AppConfig.translationFunctionURL {
-            self.functionURL = configURL
-            return
-        }
-
-        if let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
-           let dictionary = NSDictionary(contentsOfFile: path),
-           let urlString = dictionary["TranslationFunctionURL"] as? String,
-           let url = URL(string: urlString),
-           !urlString.isEmpty,
-           !urlString.contains("your-project") {
-            self.functionURL = url
-        } else {
-            self.functionURL = nil
-            AppLogger.translation.error("TranslationFunctionURL is missing or not set.")
+        self.functionURL = AppConfig.translationFunctionURL
+        if functionURL == nil {
+            AppLogger.translation.error("TranslationFunctionURL is missing or invalid.")
         }
     }
 

@@ -79,13 +79,8 @@ Implementing a performant "Next Review Date" calculation directly within Core Da
    ```
 
 2. **Configure Firebase services:**
-   - Copy the example secrets file:
-     ```bash
-     cp LingoLog/Secrets.plist.example LingoLog/Secrets.plist
-     ```
-   - Deploy the Firebase Functions after setting `GOOGLE_TRANSLATE_API_KEY` as a Firebase secret and configuring `TRANSLATION_APP_ID`. See [`functions/README.md`](functions/README.md) for the exact endpoint contract and App Check setup.
-   - Set `TranslationFunctionURL` to the deployed `translation` function URL. The app contains no translation-provider API key.
-   - **Note:** `Secrets.plist` is in `.gitignore` and will not be committed to version control.
+   - Deploy the Firebase Functions after setting `GOOGLE_TRANSLATE_API_KEY` as a Firebase secret and configuring `IOS_APP_ID`. See [`functions/README.md`](functions/README.md) for the exact endpoint contract and App Check setup.
+   - Set `TranslationFunctionURL` and `DailyStoriesFunctionURL` in `LingoLog/AppConfig.plist` to the deployed HTTPS endpoints. The app contains no provider API key and does not load a local secrets plist.
 
 3. **Retire Azure safely:**
    - Deploy and validate the Firebase translation proxy first, then ship the app version that uses it.

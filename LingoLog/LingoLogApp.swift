@@ -9,7 +9,6 @@ import SwiftUI
 import UserNotifications
 import FirebaseAppCheck
 import FirebaseCore
-import GoogleSignIn
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
@@ -23,33 +22,18 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
     
-    // Handle Google Sign-In redirect URLs
-    func application(_ app: UIApplication,
-                     open url: URL,
-                     options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-      return GIDSignIn.sharedInstance.handle(url)
-    }
 }
 
 @main
 struct LingoLogApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     
-    let dataManager = DataManager.shared
-    let wordRepository: WordRepository
-    let storyRepository: StoryRepository
-    let userManager = UserManager.shared
-    let translationService = TranslationService.shared
-    let storeManager = StoreManager.shared
+    private let environment: AppEnvironment
     @Environment(\.scenePhase) private var scenePhase
-    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
+    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = false
     
     init() {
-        self.wordRepository = WordRepository(dataManager: dataManager)
-        self.storyRepository = StoryRepository(dataManager: dataManager)
-        NotificationManager.shared.requestAuthorization()
-        
-        // StoreManager is initialized via .shared above, which starts transaction listener
+        self.environment = AppEnvironment()
     }
     
     var body: some Scene {
@@ -57,18 +41,10 @@ struct LingoLogApp: App {
             ZStack {
                 Theme.Colors.background.ignoresSafeArea()
                 ContentView(
-                    dataManager: dataManager,
-                    wordRepository: wordRepository,
-                    storyRepository: storyRepository,
-                    userManager: userManager,
-                    translationService: translationService,
-                    storeManager: storeManager
+                    environment: environment
                 )
                     .onAppear {
                         updateNotificationsAndBadge()
-                    }
-                    .onOpenURL { url in
-                        GIDSignIn.sharedInstance.handle(url)
                     }
             }
         }
@@ -80,11 +56,11 @@ struct LingoLogApp: App {
     }
     
     private func updateNotificationsAndBadge() {
-        wordRepository.refresh()
+        environment.wordRepository.refresh()
         NotificationManager.shared.updateNotificationsAndBadge(
-            dueCount: wordRepository.dueWords().count,
-            hour: dataManager.notificationHour,
-            minute: dataManager.notificationMinute,
+            dueCount: environment.wordRepository.dueWords().count,
+            hour: environment.dataManager.notificationHour,
+            minute: environment.dataManager.notificationMinute,
             notificationsEnabled: notificationsEnabled
         )
     }

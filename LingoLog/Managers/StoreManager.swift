@@ -17,6 +17,7 @@ final class StoreManager: ObservableObject {
     @Published private(set) var dailyStoriesProduct: Product?
     @Published private(set) var purchaseError: String?
     @Published private(set) var isPurchasing: Bool = false
+    @Published private(set) var isLoadingProducts: Bool = false
     @Published private(set) var latestSubscriptionJWS: String?
     
     var isStoryUnlocked: Bool {
@@ -31,7 +32,6 @@ final class StoreManager: ObservableObject {
     // MARK: - Init
     
     private init() {
-        isDailyStoriesActive = UserDefaults.standard.bool(forKey: "dailyStoriesSubscriptionActive")
         transactionListener = listenForTransactions()
         
         Task {
@@ -47,15 +47,23 @@ final class StoreManager: ObservableObject {
     // MARK: - Fetch Products
     
     func fetchProducts() async {
+        isLoadingProducts = true
+        purchaseError = nil
+        defer { isLoadingProducts = false }
+
         do {
             let products = try await Product.products(for: [Self.dailyStoriesMonthlyProductID])
             if let product = products.first {
                 dailyStoriesProduct = product
                 logger.info("Fetched product: \(product.displayName) - \(product.displayPrice)")
             } else {
+                dailyStoriesProduct = nil
+                purchaseError = "Daily Stories is not available right now. Please try again later."
                 logger.warning("Daily Stories subscription product not found.")
             }
         } catch {
+            dailyStoriesProduct = nil
+            purchaseError = "Unable to load the subscription. Check your connection and try again."
             logger.error("Failed to fetch products: \(error.localizedDescription, privacy: .public)")
         }
     }
@@ -211,13 +219,10 @@ final class StoreManager: ObservableObject {
     private func applyActive(transaction: Transaction, jwsRepresentation: String?) {
         isDailyStoriesActive = true
         latestSubscriptionJWS = jwsRepresentation
-        UserDefaults.standard.set(true, forKey: "dailyStoriesSubscriptionActive")
     }
     
     private func applyInactive() {
         isDailyStoriesActive = false
         latestSubscriptionJWS = nil
-        UserDefaults.standard.set(false, forKey: "dailyStoriesSubscriptionActive")
-        UserDefaults.standard.removeObject(forKey: "isStoryUnlocked")
     }
 }

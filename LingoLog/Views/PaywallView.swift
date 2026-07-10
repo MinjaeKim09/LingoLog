@@ -110,9 +110,18 @@ struct PaywallView: View {
                                 .cornerRadius(14)
                             }
                             .disabled(storeManager.isPurchasing)
-                        } else {
+                        } else if storeManager.isLoadingProducts {
                             ProgressView("Loading price...")
                                 .tint(Theme.Colors.accent)
+                        } else {
+                            Button(action: {
+                                Task { await storeManager.fetchProducts() }
+                            }) {
+                                Label("Try Again", systemImage: "arrow.clockwise")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .primaryButtonStyle()
+                            .disabled(storeManager.isPurchasing)
                         }
                         
                         // Restore Purchases
@@ -125,16 +134,19 @@ struct PaywallView: View {
                         }
                         .disabled(storeManager.isPurchasing)
                         
-                        if let termsURL = AppConfig.termsOfServiceURL,
-                           let privacyURL = AppConfig.privacyPolicyURL {
-                            Text("Subscription renews monthly until canceled. Manage or cancel anytime in your Apple ID subscriptions.")
-                                .font(.caption2)
-                                .foregroundStyle(Theme.Colors.textSecondary)
-                                .multilineTextAlignment(.center)
-                            
+                        Text("Subscription renews monthly until canceled. Manage or cancel anytime in your Apple ID subscriptions.")
+                            .font(.caption2)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+
+                        if AppConfig.termsOfServiceURL != nil || AppConfig.privacyPolicyURL != nil {
                             HStack(spacing: 12) {
-                                Link("Terms", destination: termsURL)
-                                Link("Privacy", destination: privacyURL)
+                                if let termsURL = AppConfig.termsOfServiceURL {
+                                    Link("Terms", destination: termsURL)
+                                }
+                                if let privacyURL = AppConfig.privacyPolicyURL {
+                                    Link("Privacy", destination: privacyURL)
+                                }
                             }
                             .font(.caption2)
                             .foregroundStyle(Theme.Colors.accent)

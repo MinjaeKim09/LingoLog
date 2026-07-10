@@ -1,3 +1,4 @@
+import FirebaseAppCheck
 import Foundation
 
 enum GeminiServiceError: LocalizedError {
@@ -77,21 +78,9 @@ class GeminiService {
     private let proxyURL: URL?
     
     private init() {
-        if let configURL = AppConfig.dailyStoriesFunctionURL {
-            self.proxyURL = configURL
-            return
-        }
-        
-        if let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
-           let dictionary = NSDictionary(contentsOfFile: path),
-           let proxyString = dictionary["DailyStoriesFunctionURL"] as? String,
-           let proxyURL = URL(string: proxyString),
-           !proxyString.isEmpty,
-           !proxyString.contains("your-project") {
-            self.proxyURL = proxyURL
-        } else {
-            self.proxyURL = nil
-            AppLogger.gemini.error("DailyStoriesFunctionURL missing or not set.")
+        self.proxyURL = AppConfig.dailyStoriesFunctionURL
+        if proxyURL == nil {
+            AppLogger.gemini.error("DailyStoriesFunctionURL is missing or invalid.")
         }
     }
     
@@ -128,6 +117,9 @@ class GeminiService {
         var request = URLRequest(url: proxyURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let appCheckToken = try await AppCheck.appCheck().token(forcingRefresh: false)
+        request.setValue(appCheckToken.token, forHTTPHeaderField: "X-Firebase-AppCheck")
         request.httpBody = try JSONEncoder().encode(payload)
         
         let (data, response) = try await URLSession.shared.data(for: request)

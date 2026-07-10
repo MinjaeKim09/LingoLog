@@ -1,7 +1,8 @@
 import CoreData
 import Foundation
 
-class DataManager: ObservableObject {
+@MainActor
+final class DataManager: ObservableObject {
     static let shared = DataManager()
     
     @Published var notificationHour: Int {
@@ -22,6 +23,9 @@ class DataManager: ObservableObject {
     
     private init() {
         container = NSPersistentContainer(name: "LingoLog")
+        let description = container.persistentStoreDescriptions.first
+        description?.shouldMigrateStoreAutomatically = true
+        description?.shouldInferMappingModelAutomatically = true
         
         container.loadPersistentStores { description, error in
             if let error = error {
@@ -73,6 +77,20 @@ class DataManager: ObservableObject {
         viewContext.delete(word)
         save()
     }
+
+    /// Deletes every locally stored word and generated story. This is intentionally explicit so
+    /// the Settings action can truthfully promise to reset all learning data.
+    func deleteAllLearningData() {
+        for entityName in ["WordEntry", "DailyStory"] {
+            let request = NSFetchRequest<NSManagedObject>(entityName: entityName)
+            do {
+                try viewContext.fetch(request).forEach(viewContext.delete)
+            } catch {
+                AppLogger.data.error("Unable to reset \(entityName, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            }
+        }
+        save()
+    }
     
     func fetchWords(for language: String? = nil) -> [WordEntry] {
         let request: NSFetchRequest<WordEntry> = WordEntry.fetchRequest()
@@ -122,4 +140,4 @@ class DataManager: ObservableObject {
             return []
         }
     }
-} 
+}

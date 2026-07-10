@@ -8,20 +8,15 @@
 import SwiftUI
 
 struct ContentView: View {
-    let dataManager: DataManager
-    let wordRepository: WordRepository
-    let storyRepository: StoryRepository
-    let userManager: UserManager
-    let translationService: TranslationService
-    @ObservedObject var storeManager: StoreManager = .shared
+    let environment: AppEnvironment
     
     var body: some View {
         TabView {
             DashboardView(
-                wordRepository: wordRepository,
-                dataManager: dataManager,
-                userManager: userManager,
-                translationService: translationService
+                wordRepository: environment.wordRepository,
+                dataManager: environment.dataManager,
+                userManager: environment.userManager,
+                translationService: environment.translationService
             )
                 .tabItem {
                     Image(systemName: "house.fill")
@@ -29,9 +24,9 @@ struct ContentView: View {
                 }
             
             WordListView(
-                wordRepository: wordRepository,
-                dataManager: dataManager,
-                translationService: translationService
+                wordRepository: environment.wordRepository,
+                dataManager: environment.dataManager,
+                translationService: environment.translationService
             )
                 .tabItem {
                     Image(systemName: "book.fill")
@@ -39,8 +34,8 @@ struct ContentView: View {
                 }
             
             QuizView(
-                wordRepository: wordRepository,
-                dataManager: dataManager
+                wordRepository: environment.wordRepository,
+                dataManager: environment.dataManager
             )
                 .tabItem {
                     Image(systemName: "brain.head.profile")
@@ -48,8 +43,10 @@ struct ContentView: View {
                 }
             
             StoryView(
-                wordRepository: wordRepository,
-                storyRepository: storyRepository
+                wordRepository: environment.wordRepository,
+                storyRepository: environment.storyRepository,
+                storyService: environment.storyService,
+                storeManager: environment.storeManager
             )
                 .tabItem {
                     Image(systemName: "book.pages.fill")
@@ -57,10 +54,10 @@ struct ContentView: View {
                 }
             
             SettingsView(
-                wordRepository: wordRepository,
-                dataManager: dataManager,
-                userManager: userManager,
-                storeManager: storeManager
+                wordRepository: environment.wordRepository,
+                dataManager: environment.dataManager,
+                userManager: environment.userManager,
+                storeManager: environment.storeManager
             )
                 .tabItem {
                     Image(systemName: "gear")
@@ -72,11 +69,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(
-        dataManager: DataManager.shared,
-        wordRepository: WordRepository(dataManager: DataManager.shared),
-        storyRepository: StoryRepository(dataManager: DataManager.shared),
-        userManager: UserManager.shared,
-        translationService: TranslationService.shared
-    )
+    ContentView(environment: AppEnvironment())
 }

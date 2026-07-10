@@ -32,6 +32,7 @@ final class StoryViewModel: ObservableObject {
     private let storyRepository: StoryRepository
     private let geminiService: GeminiService
     private let translationService: TranslationService
+    private let storeManager: StoreManager
     
     // MARK: - Computed Properties
     
@@ -85,12 +86,14 @@ final class StoryViewModel: ObservableObject {
         wordRepository: WordRepository,
         storyRepository: StoryRepository,
         geminiService: GeminiService = .shared,
-        translationService: TranslationService = .shared
+        translationService: TranslationService = .shared,
+        storeManager: StoreManager = .shared
     ) {
         self.wordRepository = wordRepository
         self.storyRepository = storyRepository
         self.geminiService = geminiService
         self.translationService = translationService
+        self.storeManager = storeManager
         
         // Set default language to first available
         if let firstLanguage = wordRepository.availableLanguages().first {
@@ -168,7 +171,7 @@ final class StoryViewModel: ObservableObject {
                 words: selectedWords,
                 language: selectedLanguage,
                 languageName: languageName,
-                subscriptionJWS: StoreManager.shared.latestSubscriptionJWS
+                subscriptionJWS: storeManager.latestSubscriptionJWS
             )
             
             // Save the story

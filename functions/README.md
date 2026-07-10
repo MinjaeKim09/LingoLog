@@ -31,11 +31,13 @@ Set these Firebase params/secrets before deploying:
 - `APP_STORE_ENVIRONMENT`: `Sandbox` for TestFlight/local testing, `Production` for App Store.
 - `DEV_SKIP_APPLE_VERIFICATION`: defaults to `false`; set to `true` only while running local emulators before App Store subscription verification is configured.
 - `GOOGLE_TRANSLATE_API_KEY`: Google Cloud Translation Basic v2 API key. Create it with `firebase functions:secrets:set GOOGLE_TRANSLATE_API_KEY`; bind it only to `translation` as implemented in `index.js`.
-- `TRANSLATION_APP_ID`: the iOS Firebase App ID from `GOOGLE_APP_ID` in `LingoLog/GoogleService-Info.plist`. Firebase will prompt for this parameter when the function is deployed; use `functions/.env.local` for emulator-only values.
+- `IOS_APP_ID`: the iOS Firebase App ID from `GOOGLE_APP_ID` in `LingoLog/GoogleService-Info.plist`. Both endpoints require a valid Firebase App Check token for this app ID. Firebase will prompt for this parameter when the function is deployed; use `functions/.env.local` for emulator-only values.
 
 Before deployment, enable the Cloud Translation API in the Google Cloud project and restrict the Google API key to that API. Configure Firebase App Check for the iOS app with DeviceCheck, then register a debug token in Firebase for each simulator used during development. The iOS app sends the token itself because `translation` is a direct HTTPS function rather than a callable function.
 
-The iOS app should point `DailyStoriesFunctionURL` at the deployed story URL and `TranslationFunctionURL` at the deployed translation URL.
+The iOS app should point `DailyStoriesFunctionURL` at the deployed story URL and `TranslationFunctionURL` at the deployed translation URL. Release URLs must use HTTPS; the app permits HTTP only for `localhost` and `127.0.0.1` in Debug builds.
+
+Deploy the included `firestore.rules` with `firebase deploy --only firestore:rules` (or deploy it together with functions). Direct Firestore client access is intentionally denied.
 
 For iOS Simulator + Firebase emulator testing, use:
 

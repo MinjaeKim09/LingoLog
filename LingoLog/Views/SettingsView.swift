@@ -9,7 +9,7 @@ struct SettingsView: View {
     @State private var showingResetAlert = false
     @State private var showingExportSheet = false
     @State private var showingNotificationSettingsAlert = false
-    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
+    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = false
     
     init(wordRepository: WordRepository, dataManager: DataManager, userManager: UserManager, storeManager: StoreManager = .shared) {
         self.wordRepository = wordRepository
@@ -281,11 +281,9 @@ struct SettingsView: View {
     // MARK: - Helpers
     
     private func resetAllData() {
-        for word in wordRepository.words {
-            dataManager.deleteWord(word)
-        }
+        dataManager.deleteAllLearningData()
         StudyHistoryManager.shared.reset()
-        userManager.reset()
+        userManager.resetProfile()
         NotificationManager.shared.updateNotificationsAndBadge(
             dueCount: 0,
             hour: dataManager.notificationHour,

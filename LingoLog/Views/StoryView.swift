@@ -3,15 +3,21 @@ import SwiftUI
 struct StoryView: View {
     let wordRepository: WordRepository
     let storyRepository: StoryRepository
+    let storyService: GeminiService
+    let storeManager: StoreManager
     
     @StateObject private var viewModel: StoryViewModel
     
-    init(wordRepository: WordRepository, storyRepository: StoryRepository) {
+    init(wordRepository: WordRepository, storyRepository: StoryRepository, storyService: GeminiService = .shared, storeManager: StoreManager = .shared) {
         self.wordRepository = wordRepository
         self.storyRepository = storyRepository
+        self.storyService = storyService
+        self.storeManager = storeManager
         _viewModel = StateObject(wrappedValue: StoryViewModel(
             wordRepository: wordRepository,
-            storyRepository: storyRepository
+            storyRepository: storyRepository,
+            geminiService: storyService,
+            storeManager: storeManager
         ))
     }
     
