@@ -1,6 +1,7 @@
 # Secrets
 Secrets.plist
 functions/.env
+functions/.env.*
 functions/.secret.local
 functions/node_modules/
 *-debug.log

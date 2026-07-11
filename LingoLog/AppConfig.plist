@@ -7,8 +7,8 @@
 	<key>TermsOfServiceURL</key>
 	<string></string>
 	<key>DailyStoriesFunctionURL</key>
-	<string></string>
+	<string>https://us-central1-lingolog-eed1b.cloudfunctions.net/generateDailyStory</string>
 	<key>TranslationFunctionURL</key>
-	<string></string>
+	<string>https://us-central1-lingolog-eed1b.cloudfunctions.net/translation</string>
 </dict>
 </plist>
