@@ -17,10 +17,14 @@ struct WordListView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
-                // Header Area
-                VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Your words")
+                        .font(.system(size: 38, weight: .regular))
+                        .tracking(-1)
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .padding(.horizontal)
                     // Language Filter
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
@@ -44,10 +48,10 @@ struct WordListView: View {
                             .foregroundStyle(Theme.Colors.textPrimary)
                     }
                     .padding()
-                    .background(Theme.Colors.inputBackground)
-                    .cornerRadius(12)
+                    .background(Theme.Colors.cardBackground)
+                    .clipShape(Capsule())
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
+                        Capsule()
                             .stroke(Theme.Colors.divider, lineWidth: 1)
                     )
                     .padding(.horizontal)
@@ -86,14 +90,10 @@ struct WordListView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Theme.Typography.title("My Words")
-                        .foregroundStyle(Theme.Colors.textPrimary)
-                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddWord = true }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
+                        Image(systemName: "plus")
+                            .font(.headline)
                             .foregroundStyle(Theme.Colors.accent)
                     }
                 }
@@ -166,9 +166,6 @@ struct WordRowView: View {
                 }
             }
             
-            Divider()
-                .background(Theme.Colors.divider)
-            
             HStack {
                 if let dateAdded = word.dateAdded {
                     Text("Added \(dateAdded.formatted(date: .abbreviated, time: .omitted))")
@@ -226,4 +223,4 @@ struct LanguageFilterButton: View {
             translationService: TranslationService.shared
         )
     }
-} 
+}

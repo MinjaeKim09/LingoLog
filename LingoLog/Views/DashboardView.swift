@@ -8,267 +8,166 @@ struct DashboardView: View {
     @StateObject private var viewModel: DashboardViewModel
     @State private var showingAddWord = false
     @State private var showingQuiz = false
-    
-    init(
-        wordRepository: WordRepository,
-        dataManager: DataManager,
-        userManager: UserManager,
-        translationService: TranslationService
-    ) {
+
+    init(wordRepository: WordRepository, dataManager: DataManager, userManager: UserManager, translationService: TranslationService) {
         self.wordRepository = wordRepository
         self.dataManager = dataManager
         self.userManager = userManager
         self.translationService = translationService
-        _viewModel = StateObject(
-            wrappedValue: DashboardViewModel(
-                wordRepository: wordRepository,
-                dataManager: dataManager
-            )
-        )
+        _viewModel = StateObject(wrappedValue: DashboardViewModel(wordRepository: wordRepository, dataManager: dataManager))
     }
-    
+
+    private var greeting: String {
+        userManager.displayName.isEmpty ? "Your language,\nmade memorable." : "Hello, \(userManager.displayName)."
+    }
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    // Welcome Section
+                LazyVStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("LINGOLOG")
+                            .font(.caption.weight(.bold))
+                            .tracking(1.8)
+                            .foregroundStyle(Theme.Colors.accent)
+                        Text(greeting)
+                            .font(.system(size: 40, weight: .regular))
+                            .tracking(-1.4)
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                            .minimumScaleFactor(0.8)
+                        Text("Build a vocabulary that stays with you.")
+                            .font(.title3)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+                    .padding(.top, 12)
 
-                    VStack(spacing: 8) {
-                        if !userManager.displayName.isEmpty {
-                            Theme.Typography.display("Welcome, \(userManager.displayName)")
-                                .foregroundStyle(Theme.Colors.textPrimary)
-                                .multilineTextAlignment(.center)
-                        } else {
-                            Theme.Typography.display("Welcome to LingoLog")
-                                .foregroundStyle(Theme.Colors.textPrimary)
-                                .multilineTextAlignment(.center)
-                        }
-                        
+                    HStack(spacing: 12) {
+                        QuickActionButton(title: "Add a word", subtitle: "Capture something new", icon: "plus") { showingAddWord = true }
+                        QuickActionButton(title: "Review", subtitle: "\(viewModel.wordsDueForReview) ready today", icon: "arrow.right") { showingQuiz = true }
+                    }
 
-                    }
-                    .padding(.top)
-                    
-                    // Quick Actions
-                    HStack(spacing: 16) {
-                        QuickActionButton(
-                            title: "Add Word",
-                            subtitle: "New vocabulary",
-                            icon: "plus.circle.fill"
-                        ) {
-                            showingAddWord = true
+                    VStack(alignment: .leading, spacing: 22) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("Your progress").font(.title2.weight(.medium))
+                            Spacer()
+                            Text("THIS WEEK").font(.caption2.weight(.bold)).tracking(1.2).foregroundStyle(Theme.Colors.textSecondary)
                         }
-                        
-                        QuickActionButton(
-                            title: "Take Quiz",
-                            subtitle: "\(viewModel.wordsDueForReview) words due",
-                            icon: "brain.head.profile"
-                        ) {
-                            showingQuiz = true
+
+                        HStack(alignment: .bottom, spacing: 8) {
+                            Text("\(viewModel.learningStreak)").font(.system(size: 58, weight: .regular)).tracking(-2)
+                            Text(viewModel.learningStreak == 1 ? "day streak" : "day streak")
+                                .font(.headline).foregroundStyle(Theme.Colors.textSecondary).padding(.bottom, 10)
+                            Spacer()
+                            Image(systemName: "flame.fill").font(.title2).foregroundStyle(Theme.Colors.accent)
+                        }
+
+                        GeometryReader { proxy in
+                            let ratio = viewModel.totalWords == 0 ? 0 : CGFloat(viewModel.masteredWords) / CGFloat(viewModel.totalWords)
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Theme.Colors.inactive).frame(height: 5)
+                                Capsule().fill(Theme.Colors.accent).frame(width: proxy.size.width * ratio, height: 5)
+                            }
+                        }
+                        .frame(height: 5)
+
+                        HStack {
+                            Metric(value: "\(viewModel.totalWords)", label: "words saved")
+                            Spacer()
+                            Metric(value: "\(viewModel.masteredWords)", label: "mastered")
+                            Spacer()
+                            Metric(value: "\(viewModel.wordsDueForReview)", label: "due now")
                         }
                     }
-                    
-                    // Statistics Cards
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 16) {
-                        StatCard(
-                            title: "Total Words",
-                            value: "\(viewModel.totalWords)",
-                            icon: "book.fill"
-                        )
-                        StatCard(
-                            title: "Mastered Words",
-                            value: "\(viewModel.masteredWords)",
-                            icon: "star.fill"
-                        )
-                        StatCard(
-                            title: "Due for Review",
-                            value: "\(viewModel.wordsDueForReview)",
-                            icon: "clock.fill"
-                        )
-                        StatCard(
-                            title: "Learning Streak",
-                            value: "\(viewModel.learningStreak) day\(viewModel.learningStreak == 1 ? "" : "s")",
-                            icon: "flame.fill"
-                        )
-                    }
-                    
-                    // Recent Words
+                    .padding(24)
+                    .glassCard()
+
                     if !wordRepository.words.isEmpty {
                         RecentWordsSection(wordRepository: wordRepository)
                     } else {
                         EmptyStateView()
                     }
                 }
-                .padding()
+                .padding(.horizontal, Theme.Metrics.pagePadding)
+                .padding(.bottom, 28)
             }
-            .background(Color.clear) // Allow global ZStack background to show
-            .navigationTitle("")
-            .navigationBarHidden(true)
-            .sheet(isPresented: $showingAddWord) {
-                AddWordView(
-                    dataManager: dataManager,
-                    translationService: translationService
-                )
-            }
-            .sheet(isPresented: $showingQuiz) {
-                QuizView(
-                    wordRepository: wordRepository,
-                    dataManager: dataManager
-                )
-            }
+            .scrollIndicators(.hidden)
+            .background(Theme.Colors.background)
+            .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $showingAddWord) { AddWordView(dataManager: dataManager, translationService: translationService) }
+            .sheet(isPresented: $showingQuiz) { QuizView(wordRepository: wordRepository, dataManager: dataManager) }
         }
-        .onAppear {
-            viewModel.refresh()
+        .onAppear { viewModel.refresh() }
+    }
+}
+
+private struct Metric: View {
+    let value: String; let label: String
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(value).font(.title2.weight(.medium)).monospacedDigit()
+            Text(label).font(.caption).foregroundStyle(Theme.Colors.textSecondary)
         }
     }
 }
 
 struct QuickActionButton: View {
-    let title: String
-    let subtitle: String
-    let icon: String
-    let action: () -> Void
-    
+    let title: String; let subtitle: String; let icon: String; let action: () -> Void
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 12) {
-                Image(systemName: icon)
-                    // Normalize SF Symbol bounding boxes across different icons.
-                    .font(.system(size: 32, weight: .regular))
-                    .frame(width: 44, height: 44)
-                    .foregroundStyle(Theme.Colors.accent)
-                
-                VStack(spacing: 4) {
-                    Theme.Typography.title(title)
-                        .font(.headline) // Override size slightly for button context
-                        .foregroundColor(Theme.Colors.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                    
-                    Theme.Typography.body(subtitle)
-                        .font(.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
+            VStack(alignment: .leading, spacing: 20) {
+                HStack { Image(systemName: icon).font(.headline); Spacer() }
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(title).font(.title3.weight(.medium))
+                    Text(subtitle).font(.caption).foregroundStyle(Theme.Colors.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 20)
-            .padding(.horizontal, 10)
-            // Ensure both quick-action cards are identical height.
-            .frame(height: 148)
+            .foregroundStyle(Theme.Colors.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
             .glassCard()
         }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-struct StatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundStyle(Theme.Colors.secondaryAccent)
-                Spacer()
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(value)
-                .font(.system(.title, design: .serif))
-                .fontWeight(.bold)
-                .foregroundColor(Theme.Colors.textPrimary)
-                
-                Theme.Typography.body(title)
-                    .font(.caption)
-                    .foregroundColor(Theme.Colors.textSecondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding()
-        .glassCard()
+        .buttonStyle(.plain)
+        .accessibilityHint(subtitle)
     }
 }
 
 struct RecentWordsSection: View {
     @ObservedObject var wordRepository: WordRepository
-    
-    private var recentWords: [WordEntry] {
-        Array(wordRepository.words.prefix(5))
-    }
-    
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Theme.Typography.title("Recent Words")
-                .foregroundColor(Theme.Colors.textPrimary)
-            
-            ForEach(recentWords, id: \.id) { word in
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Theme.Typography.body(word.word ?? "")
-                            .fontWeight(.medium)
-                            .foregroundColor(Theme.Colors.textPrimary)
-                        
-                        Theme.Typography.body(word.translation ?? "")
-                            .font(.subheadline)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                        
-                        Text(word.language ?? "")
-                            .font(.caption)
-                            .foregroundColor(Theme.Colors.secondaryAccent)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Recently added").font(.title2.weight(.medium))
+                Spacer()
+                Text("LATEST").font(.caption2.weight(.bold)).tracking(1.2).foregroundStyle(Theme.Colors.textSecondary)
+            }.padding(.bottom, 12)
+            ForEach(Array(wordRepository.words.prefix(5)), id: \.id) { word in
+                HStack(spacing: 14) {
+                    Circle().fill(Theme.Colors.accent).frame(width: 7, height: 7)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(word.word ?? "").font(.headline)
+                        Text(word.translation ?? "").font(.subheadline).foregroundStyle(Theme.Colors.textSecondary)
                     }
                     Spacer()
-                    HStack(spacing: 4) {
-                        ForEach(0..<5, id: \.self) { index in
-                            Circle()
-                                .fill(index < Int(word.masteryLevel) ? Theme.Colors.success : Theme.Colors.inactive)
-                                .frame(width: 6, height: 6)
-                        }
-                    }
+                    Text(word.language ?? "").font(.caption).foregroundStyle(Theme.Colors.textSecondary)
                 }
-                .padding()
-                .glassCard()
+                .padding(.vertical, 15)
+                if word.id != wordRepository.words.prefix(5).last?.id { Divider().foregroundStyle(Theme.Colors.divider) }
             }
         }
+        .padding(22)
+        .glassCard()
     }
 }
 
 struct EmptyStateView: View {
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "book.closed")
-                .font(.system(size: 60))
-                .foregroundColor(Theme.Colors.textSecondary.opacity(0.3))
-            
-            VStack(spacing: 8) {
-                Theme.Typography.title("No words yet!")
-                    .foregroundColor(Theme.Colors.textPrimary)
-                
-                Theme.Typography.body("Start building your vocabulary by adding your first word.")
-                    .foregroundColor(Theme.Colors.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .padding()
-        .glassCard()
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Your first word starts here.").font(.title2.weight(.medium))
+            Text("Save a word you want to remember. LingoLog will bring it back at the right time.")
+                .foregroundStyle(Theme.Colors.textSecondary)
+            Image(systemName: "arrow.up.right").foregroundStyle(Theme.Colors.accent).padding(.top, 8)
+        }.frame(maxWidth: .infinity, alignment: .leading).padding(24).glassCard()
     }
 }
 
-#Preview {
-    ZStack {
-        Theme.Colors.background.ignoresSafeArea()
-        DashboardView(
-            wordRepository: WordRepository(dataManager: DataManager.shared),
-            dataManager: DataManager.shared,
-            userManager: UserManager.shared,
-            translationService: TranslationService.shared
-        )
-    }
-}
+#Preview { DashboardView(wordRepository: WordRepository(dataManager: .shared), dataManager: .shared, userManager: .shared, translationService: .shared) }

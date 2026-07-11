@@ -1,173 +1,107 @@
 import SwiftUI
 
+/// LingoLog's editorial design system: quiet surfaces, confident type, and one
+/// high-signal accent. All colors are semantic so the same hierarchy survives
+/// Dark Mode and increased contrast without per-screen branching.
 struct Theme {
     struct Colors {
-        // Adaptive background: Warm Paper (light) / Deep Charcoal (dark)
-        static let background = Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "1C1C1E"))
-                : UIColor(Color(hex: "F5F2EB"))
-        })
-        
-        // Adaptive text: Charcoal (light) / Off-white (dark)
-        static let textPrimary = Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "F5F5F5"))
-                : UIColor(Color(hex: "2D2D2D"))
-        })
-        
-        // Adaptive secondary text: Soft Gray (light) / Light Gray (dark)
-        static let textSecondary = Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "A0A0A0"))
-                : UIColor(Color(hex: "686868"))
-        })
-        
-        // Accent colors - slightly brighter in dark mode for visibility
-        static let accent = Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "3D7D6B"))  // Brighter Emerald
-                : UIColor(Color(hex: "2D5D4B"))  // Deep Emerald
-        })
-        
-        static let secondaryAccent = Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "D4BC9F"))  // Lighter Brass
-                : UIColor(Color(hex: "C6AD8F"))  // Antique Brass
-        })
-        
-        static let success = Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "5A9C69"))  // Brighter Green
-                : UIColor(Color(hex: "4A7C59"))  // Muted Green
-        })
-        
-        static let error = Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "D4655D"))  // Brighter Red
-                : UIColor(Color(hex: "C4554D"))  // Muted Red
-        })
-        
-        static let warning = Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "F2C34C"))  // Brighter Yellow
-                : UIColor(Color(hex: "E2B33C"))  // Burnt Yellow
-        })
-        
-        // Additional colors for cards/surfaces in dark mode
-        static let cardBackground = Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "2C2C2E"))
-                : UIColor(Color(hex: "FFFFFF"))
-        })
-        
-        static let divider = Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "3A3A3C"))
-                : UIColor(Color(hex: "E5E5E5"))
-        })
-        
-        // Input field backgrounds - subtle in both modes
-        static let inputBackground = Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "3A3A3C"))
-                : UIColor(Color(hex: "FFFFFF")).withAlphaComponent(0.5)
-        })
-        
-        // Inactive/unfilled elements
-        static let inactive = Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark
-                ? UIColor(Color(hex: "48484A"))
-                : UIColor(Color(hex: "E5E5E5"))
-        })
+        static let background = adaptive(light: "FFFFFF", dark: "0B0B0C")
+        static let cardBackground = adaptive(light: "F7F7F5", dark: "18181A")
+        static let raised = adaptive(light: "FFFFFF", dark: "222225")
+        static let textPrimary = adaptive(light: "0A0A0A", dark: "F7F7F5")
+        static let textSecondary = adaptive(light: "858585", dark: "A1A1A6")
+        static let accent = adaptive(light: "FF5A1F", dark: "FF6A32")
+        static let secondaryAccent = accent
+        static let success = adaptive(light: "198754", dark: "3ECF8E")
+        static let error = adaptive(light: "D92D20", dark: "FF6961")
+        static let warning = adaptive(light: "E97800", dark: "FF9F0A")
+        static let divider = adaptive(light: "DEDEDC", dark: "343438")
+        static let inputBackground = adaptive(light: "FFFFFF", dark: "222225")
+        static let inactive = adaptive(light: "E7E7E5", dark: "3A3A3E")
+
+        private static func adaptive(light: String, dark: String) -> Color {
+            Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(Color(hex: dark)) : UIColor(Color(hex: light)) })
+        }
     }
-    
+
+    struct Metrics {
+        static let pagePadding: CGFloat = 20
+        static let cardRadius: CGFloat = 24
+        static let controlRadius: CGFloat = 16
+    }
+
     struct Typography {
         static func display(_ text: String) -> Text {
-            Text(text)
-                .font(.system(.largeTitle, design: .serif))
-                .fontWeight(.medium)
+            Text(text).font(.system(size: 38, weight: .regular, design: .default))
         }
-        
         static func title(_ text: String) -> Text {
-            Text(text)
-                .font(.system(.title2, design: .serif))
-                .fontWeight(.semibold)
+            Text(text).font(.system(.title2, design: .default)).fontWeight(.medium)
         }
-        
         static func body(_ text: String) -> Text {
-            Text(text)
-                .font(.system(.body, design: .rounded))
+            Text(text).font(.system(.body, design: .default))
         }
     }
 }
 
-// MARK: - Color Extension
 extension Color {
     init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
+        let value = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var number: UInt64 = 0
+        Scanner(string: value).scanHexInt64(&number)
         let a, r, g, b: UInt64
-        switch hex.count {
-        case 3: // RGB (12-bit)
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: // RGB (24-bit)
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8: // ARGB (32-bit)
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (1, 1, 1, 0)
+        switch value.count {
+        case 3: (a, r, g, b) = (255, (number >> 8) * 17, (number >> 4 & 0xF) * 17, (number & 0xF) * 17)
+        case 6: (a, r, g, b) = (255, number >> 16, number >> 8 & 0xFF, number & 0xFF)
+        case 8: (a, r, g, b) = (number >> 24, number >> 16 & 0xFF, number >> 8 & 0xFF, number & 0xFF)
+        default: (a, r, g, b) = (255, 0, 0, 0)
         }
-        
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue: Double(b) / 255,
-            opacity: Double(a) / 255
-        )
+        self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: Double(a) / 255)
     }
 }
 
-// MARK: - View Modifiers
 struct GlassCardModifier: ViewModifier {
-    @Environment(\.colorScheme) var colorScheme
-    
     func body(content: Content) -> some View {
         content
-            .background(.ultraThinMaterial)
-            .cornerRadius(20)
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.05), radius: 15, x: 0, y: 5)
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.white.opacity(0.3), lineWidth: 1)
-            )
+            .background(Theme.Colors.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.cardRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: Theme.Metrics.cardRadius, style: .continuous)
+                    .stroke(Theme.Colors.divider.opacity(0.45), lineWidth: 0.5)
+            }
     }
 }
 
 struct PrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(.headline, design: .rounded))
-            .foregroundColor(.white)
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(Theme.Colors.accent)
-            .cornerRadius(16)
-            .shadow(color: Theme.Colors.accent.opacity(0.3), radius: 8, x: 0, y: 4)
-            .opacity(configuration.isPressed ? 0.8 : 1.0)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .animation(.easeOut(duration: 0.2), value: configuration.isPressed)
+            .font(.system(.headline, design: .default).weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .background(isEnabled ? Theme.Colors.textPrimary : Theme.Colors.inactive)
+            .clipShape(Capsule())
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .opacity(configuration.isPressed ? 0.82 : 1)
+            .animation(.snappy(duration: 0.18), value: configuration.isPressed)
+    }
+}
+
+struct SecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline)
+            .foregroundStyle(Theme.Colors.textPrimary)
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(Theme.Colors.inputBackground)
+            .clipShape(Capsule())
+            .overlay { Capsule().stroke(Theme.Colors.divider, lineWidth: 1) }
+            .opacity(configuration.isPressed ? 0.65 : 1)
     }
 }
 
 extension View {
-    func glassCard() -> some View {
-        self.modifier(GlassCardModifier())
-    }
-    
-    func primaryButtonStyle() -> some View {
-        self.buttonStyle(PrimaryButtonStyle())
-    }
+    func glassCard() -> some View { modifier(GlassCardModifier()) }
+    func primaryButtonStyle() -> some View { buttonStyle(PrimaryButtonStyle()) }
+    func secondaryButtonStyle() -> some View { buttonStyle(SecondaryButtonStyle()) }
 }

@@ -9,9 +9,10 @@ import SwiftUI
 
 struct ContentView: View {
     let environment: AppEnvironment
+    @State private var selection = 0
     
     var body: some View {
-        TabView {
+        TabView(selection: $selection) {
             DashboardView(
                 wordRepository: environment.wordRepository,
                 dataManager: environment.dataManager,
@@ -20,8 +21,8 @@ struct ContentView: View {
             )
                 .tabItem {
                     Image(systemName: "house.fill")
-                    Text("Dashboard")
-                }
+                    Text("Today")
+                }.tag(0)
             
             WordListView(
                 wordRepository: environment.wordRepository,
@@ -31,7 +32,7 @@ struct ContentView: View {
                 .tabItem {
                     Image(systemName: "book.fill")
                     Text("Words")
-                }
+                }.tag(1)
             
             QuizView(
                 wordRepository: environment.wordRepository,
@@ -40,7 +41,7 @@ struct ContentView: View {
                 .tabItem {
                     Image(systemName: "brain.head.profile")
                     Text("Quiz")
-                }
+                }.tag(2)
             
             StoryView(
                 wordRepository: environment.wordRepository,
@@ -51,7 +52,7 @@ struct ContentView: View {
                 .tabItem {
                     Image(systemName: "book.pages.fill")
                     Text("Stories")
-                }
+                }.tag(3)
             
             SettingsView(
                 wordRepository: environment.wordRepository,
@@ -62,9 +63,11 @@ struct ContentView: View {
                 .tabItem {
                     Image(systemName: "gear")
                     Text("Settings")
-                }
+                }.tag(4)
         }
-        .accentColor(Theme.Colors.accent)
+        .tint(Theme.Colors.accent)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarBackground(Theme.Colors.background, for: .tabBar)
     }
 }
 

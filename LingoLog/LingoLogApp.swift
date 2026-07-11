@@ -34,6 +34,12 @@ struct LingoLogApp: App {
     
     init() {
         self.environment = AppEnvironment()
+        let tabAppearance = UITabBarAppearance()
+        tabAppearance.configureWithOpaqueBackground()
+        tabAppearance.backgroundColor = .systemBackground
+        tabAppearance.shadowColor = UIColor.separator.withAlphaComponent(0.35)
+        UITabBar.appearance().standardAppearance = tabAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabAppearance
     }
     
     var body: some Scene {
