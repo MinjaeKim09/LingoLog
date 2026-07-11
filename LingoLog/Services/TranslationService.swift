@@ -1,26 +1,21 @@
+import FirebaseAppCheck
 import Foundation
 
 enum TranslationServiceError: LocalizedError {
-    case missingAPIKey
-    case invalidProxyURL
-    
+    case missingProxyURL
+    case invalidResponse
+    case apiError(String)
+
     var errorDescription: String? {
         switch self {
-        case .missingAPIKey:
-            return "Translation is unavailable. Please configure a secure proxy or API key."
-        case .invalidProxyURL:
-            return "Translation proxy URL is invalid."
+        case .missingProxyURL:
+            return "Translation is not configured yet. Please add the translation service endpoint."
+        case .invalidResponse:
+            return "Translation returned an invalid response."
+        case .apiError(let message):
+            return message
         }
     }
-}
-
-struct TranslationResponse: Codable {
-    let translations: [Translation]
-}
-
-struct Translation: Codable {
-    let text: String
-    let to: String
 }
 
 struct Language: Identifiable, Codable, Hashable {
@@ -29,139 +24,139 @@ struct Language: Identifiable, Codable, Hashable {
     let dir: String
     var id: String { code }
     let code: String
+
+    init(code: String, name: String) {
+        self.code = code
+        self.name = name
+        self.nativeName = Self.nativeName(for: code) ?? name
+        self.dir = Self.isRightToLeft(code) ? "rtl" : "ltr"
+    }
+
+    private static func nativeName(for code: String) -> String? {
+        let locale = Locale(identifier: code.replacingOccurrences(of: "-", with: "_"))
+        return locale.localizedString(forIdentifier: code)
+            ?? locale.localizedString(forLanguageCode: code.components(separatedBy: "-").first ?? code)
+    }
+
+    private static func isRightToLeft(_ code: String) -> Bool {
+        let primaryCode = code.split(separator: "-", maxSplits: 1).first?.lowercased()
+        return ["ar", "arc", "ckb", "dv", "fa", "he", "nqo", "ps", "sd", "ug", "ur", "yi"].contains(primaryCode ?? "")
+    }
 }
 
-struct LanguagesResponse: Codable {
-    let translation: [String: LanguageDetail]
+private struct TranslationRequest: Encodable {
+    let text: String
+    let sourceLanguage: String
+    let targetLanguage: String
 }
 
-struct LanguageDetail: Codable {
+private struct TranslationResponse: Decodable {
+    let translatedText: String
+}
+
+private struct TranslationLanguagesResponse: Decodable {
+    let languages: [TranslationLanguage]
+}
+
+private struct TranslationLanguage: Decodable {
+    let code: String
     let name: String
-    let nativeName: String
-    let dir: String
 }
 
-class TranslationService {
+private struct TranslationErrorResponse: Decodable {
+    let error: String?
+}
+
+final class TranslationService {
     static let shared = TranslationService()
-    
-    // API Key or proxy loaded from Secrets.plist
-    private let apiKey: String?
-    private let proxyURL: URL?
-    
-    private let region = "eastus"
-    private let endpoint = "https://api.cognitive.microsofttranslator.com/translate"
-    private let languagesEndpoint = "https://api.cognitive.microsofttranslator.com/languages"
-    
-    // In-memory cache for languages
+
+    private let functionURL: URL?
+
     private(set) var cachedLanguages: [Language] = []
-    
+
     private init() {
-        if let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
-           let dictionary = NSDictionary(contentsOfFile: path),
-           let key = dictionary["TranslatorAPIKey"] as? String {
-            self.apiKey = key.isEmpty ? nil : key
-            if let proxyString = dictionary["TranslatorProxyURL"] as? String,
-               !proxyString.isEmpty {
-                if let parsedURL = URL(string: proxyString) {
-                    self.proxyURL = parsedURL
-                } else {
-                    self.proxyURL = nil
-                    AppLogger.translation.error("TranslatorProxyURL is invalid.")
-                }
-            } else {
-                self.proxyURL = nil
-            }
-        } else {
-            self.apiKey = nil
-            self.proxyURL = nil
-            AppLogger.translation.error("Secrets.plist missing or TranslatorAPIKey not set.")
+        self.functionURL = AppConfig.translationFunctionURL
+        if functionURL == nil {
+            AppLogger.translation.error("TranslationFunctionURL is missing or invalid.")
         }
     }
-    
+
     func translate(text: String, from sourceLang: String, to targetLang: String) async throws -> String {
-        let url: URL
-        if let proxyURL = proxyURL {
-            guard var components = URLComponents(url: proxyURL, resolvingAgainstBaseURL: false) else {
-                throw TranslationServiceError.invalidProxyURL
-            }
-            var items = components.queryItems ?? []
-            items.append(URLQueryItem(name: "from", value: sourceLang))
-            items.append(URLQueryItem(name: "to", value: targetLang))
-            components.queryItems = items
-            guard let composedURL = components.url else {
-                throw TranslationServiceError.invalidProxyURL
-            }
-            url = composedURL
-        } else {
-            guard let apiKey = apiKey, !apiKey.isEmpty else {
-                throw TranslationServiceError.missingAPIKey
-            }
-            guard let endpointURL = URL(string: "\(endpoint)?api-version=3.0&from=\(sourceLang)&to=\(targetLang)") else {
-                throw URLError(.badURL)
-            }
-            url = endpointURL
-            _ = apiKey
+        guard let functionURL else {
+            throw TranslationServiceError.missingProxyURL
         }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let apiKey = apiKey, proxyURL == nil {
-            request.setValue(apiKey, forHTTPHeaderField: "Ocp-Apim-Subscription-Key")
-            request.setValue(region, forHTTPHeaderField: "Ocp-Apim-Subscription-Region")
-        }
-        
-        let body = [["Text": text]]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        
+
+        var request = try await authenticatedRequest(url: functionURL, method: "POST")
+        request.httpBody = try JSONEncoder().encode(
+            TranslationRequest(text: text, sourceLanguage: sourceLang, targetLanguage: targetLang)
+        )
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            // Try to parse error message if available, otherwise generic error
-            if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                AppLogger.translation.error("Translation Error: \(String(describing: errorJson), privacy: .public)")
-            }
-            throw URLError(.badServerResponse)
+        try validate(response: response, data: data)
+
+        do {
+            return try JSONDecoder().decode(TranslationResponse.self, from: data).translatedText
+        } catch {
+            AppLogger.translation.error("Failed to decode translation response: \(error.localizedDescription, privacy: .public)")
+            throw TranslationServiceError.invalidResponse
         }
-        
-        let result = try JSONDecoder().decode([TranslationResponse].self, from: data)
-        guard let translation = result.first?.translations.first?.text else {
-            throw URLError(.cannotParseResponse)
-        }
-        
-        return translation
     }
-    
 
     func fetchLanguages() async throws -> [Language] {
         if !cachedLanguages.isEmpty {
             return cachedLanguages
         }
-        
-        guard let url = URL(string: "\(languagesEndpoint)?api-version=3.0&scope=translation") else {
-            throw URLError(.badURL)
+
+        guard let functionURL else {
+            throw TranslationServiceError.missingProxyURL
         }
-        
-        let (data, response) = try await URLSession.shared.data(from: url)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
+
+        let request = try await authenticatedRequest(url: functionURL, method: "GET")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        do {
+            let response = try JSONDecoder().decode(TranslationLanguagesResponse.self, from: data)
+            let languages = response.languages
+                .map { Language(code: $0.code, name: $0.name) }
+                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            guard !languages.isEmpty else {
+                throw TranslationServiceError.invalidResponse
+            }
+            cachedLanguages = languages
+            return languages
+        } catch let error as TranslationServiceError {
+            throw error
+        } catch {
+            AppLogger.translation.error("Failed to decode languages response: \(error.localizedDescription, privacy: .public)")
+            throw TranslationServiceError.invalidResponse
         }
-        
-        let result = try JSONDecoder().decode(LanguagesResponse.self, from: data)
-        
-        let languages = result.translation.map { key, value in
-            Language(
-                name: value.name,
-                nativeName: value.nativeName,
-                dir: value.dir,
-                code: key
-            )
-        }.sorted { $0.name < $1.name }
-        
-        self.cachedLanguages = languages
-        return languages
+    }
+
+    private func authenticatedRequest(url: URL, method: String) async throws -> URLRequest {
+        let appCheckToken = try await AppCheck.appCheck().token(forcingRefresh: false)
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(appCheckToken.token, forHTTPHeaderField: "X-Firebase-AppCheck")
+        if method == "POST" {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+        return request
+    }
+
+    private func validate(response: URLResponse, data: Data) throws {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw TranslationServiceError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if let errorResponse = try? JSONDecoder().decode(TranslationErrorResponse.self, from: data),
+               let message = errorResponse.error,
+               !message.isEmpty {
+                throw TranslationServiceError.apiError(message)
+            }
+            throw TranslationServiceError.apiError("Translation is temporarily unavailable. Please try again later.")
+        }
     }
 }

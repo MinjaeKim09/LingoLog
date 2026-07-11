@@ -2,6 +2,8 @@ import SwiftUI
 
 struct StoryHomeView: View {
     @ObservedObject var viewModel: StoryViewModel
+    @ObservedObject var storeManager: StoreManager = .shared
+    @State private var showingPaywall = false
     
     var body: some View {
         NavigationView {
@@ -50,9 +52,12 @@ struct StoryHomeView: View {
             }
         }
         .navigationViewStyle(.stack)
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView(storeManager: storeManager)
+        }
     }
     
-    // MARK: - API Not Configured View
+    // MARK: - Backend Not Configured View
     
     private var apiNotConfiguredView: some View {
         VStack(spacing: 20) {
@@ -61,16 +66,16 @@ struct StoryHomeView: View {
                     .fill(Theme.Colors.warning.opacity(0.1))
                     .frame(width: 100, height: 100)
                 
-                Image(systemName: "key.fill")
+                Image(systemName: "server.rack")
                     .font(.system(size: 40))
                     .foregroundStyle(Theme.Colors.warning)
             }
             
             VStack(spacing: 8) {
-                Theme.Typography.title("API Key Required")
+                Theme.Typography.title("Story Service Required")
                     .foregroundStyle(Theme.Colors.textPrimary)
                 
-                Theme.Typography.body("To generate stories, please add your Gemini API key to Secrets.plist")
+                Theme.Typography.body("Configure the Daily Stories backend endpoint to generate stories.")
                     .foregroundStyle(Theme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
             }
@@ -212,11 +217,19 @@ struct StoryHomeView: View {
                 }
                 
                 Button(action: {
-                    viewModel.selectStory(story)
+                    if storeManager.isDailyStoriesActive {
+                        viewModel.selectStory(story)
+                    } else {
+                        showingPaywall = true
+                    }
                 }) {
                     HStack {
-                        Image(systemName: "book.fill")
-                        Text("Read Story")
+                        if !storeManager.isDailyStoriesActive {
+                            Image(systemName: "lock.fill")
+                        } else {
+                            Image(systemName: "book.fill")
+                        }
+                        Text(storeManager.isDailyStoriesActive ? "Read Story" : "Subscribe")
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -247,18 +260,27 @@ struct StoryHomeView: View {
             }
             
             Button(action: {
-                Task {
-                    await viewModel.loadOrGenerateStory()
+                if storeManager.isDailyStoriesActive {
+                    Task {
+                        await viewModel.loadOrGenerateStory()
+                    }
+                } else {
+                    showingPaywall = true
                 }
             }) {
                 HStack {
-                    Image(systemName: "wand.and.stars")
-                    Text("Generate Story")
+                    if !storeManager.isDailyStoriesActive {
+                        Image(systemName: "lock.fill")
+                        Text("Subscribe")
+                    } else {
+                        Image(systemName: "wand.and.stars")
+                        Text("Generate Story")
+                    }
                 }
                 .frame(maxWidth: .infinity)
             }
             .primaryButtonStyle()
-            .disabled(viewModel.wordsForSelectedLanguage.count < 3)
+            .disabled(storeManager.isDailyStoriesActive && viewModel.wordsForSelectedLanguage.count < 3)
             .opacity(viewModel.wordsForSelectedLanguage.count < 3 ? 0.5 : 1.0)
             
             if viewModel.wordsForSelectedLanguage.count < 3 {
@@ -281,9 +303,13 @@ struct StoryHomeView: View {
                 Spacer()
                 
                 Button(action: {
-                    viewModel.navigateTo(.history)
+                    if storeManager.isDailyStoriesActive {
+                        viewModel.navigateTo(.history)
+                    } else {
+                        showingPaywall = true
+                    }
                 }) {
-                    Text("See All")
+                    Text(storeManager.isDailyStoriesActive ? "See All" : "Subscribe")
                         .font(.caption)
                         .foregroundStyle(Theme.Colors.accent)
                 }
@@ -293,7 +319,11 @@ struct StoryHomeView: View {
             VStack(spacing: 12) {
                 ForEach(viewModel.storyHistory.prefix(3)) { story in
                     StoryHistoryRow(story: story) {
-                        viewModel.selectStory(story)
+                        if storeManager.isDailyStoriesActive {
+                            viewModel.selectStory(story)
+                        } else {
+                            showingPaywall = true
+                        }
                     }
                 }
             }

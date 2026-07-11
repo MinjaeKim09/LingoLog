@@ -10,14 +10,33 @@ struct AppConfig {
     static var privacyPolicyURL: URL? {
         url(forKey: "PrivacyPolicyURL")
     }
-    
     static var termsOfServiceURL: URL? {
         url(forKey: "TermsOfServiceURL")
     }
+    static var dailyStoriesFunctionURL: URL? {
+        url(forKey: "DailyStoriesFunctionURL")
+    }
+    static var translationFunctionURL: URL? {
+        url(forKey: "TranslationFunctionURL")
+    }
     
     private static func url(forKey key: String) -> URL? {
-        guard let value = value(forKey: key), !value.isEmpty else { return nil }
-        return URL(string: value)
+        guard let value = value(forKey: key), !value.isEmpty,
+              let url = URL(string: value),
+              let scheme = url.scheme?.lowercased()
+        else { return nil }
+
+        #if DEBUG
+        let isAllowed = scheme == "https" || (scheme == "http" && ["localhost", "127.0.0.1"].contains(url.host))
+        #else
+        let isAllowed = scheme == "https"
+        #endif
+
+        guard isAllowed else {
+            logger.error("\(key, privacy: .public) must use HTTPS in release builds.")
+            return nil
+        }
+        return url
     }
     
     private static func value(forKey key: String) -> String? {

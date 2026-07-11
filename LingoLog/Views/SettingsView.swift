@@ -3,17 +3,19 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var dataManager: DataManager
     @ObservedObject var userManager: UserManager
+    @ObservedObject var storeManager: StoreManager
     let wordRepository: WordRepository
     @StateObject private var viewModel: SettingsViewModel
     @State private var showingResetAlert = false
     @State private var showingExportSheet = false
     @State private var showingNotificationSettingsAlert = false
-    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
+    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = false
     
-    init(wordRepository: WordRepository, dataManager: DataManager, userManager: UserManager) {
+    init(wordRepository: WordRepository, dataManager: DataManager, userManager: UserManager, storeManager: StoreManager = .shared) {
         self.wordRepository = wordRepository
         self.dataManager = dataManager
         self.userManager = userManager
+        self.storeManager = storeManager
         _viewModel = StateObject(wrappedValue: SettingsViewModel(wordRepository: wordRepository))
     }
     
@@ -37,17 +39,10 @@ struct SettingsView: View {
                 VStack(spacing: 24) {
                     
                     // Profile Section
-                    SettingsSection(title: "Profile") {
-                        TextField("Your Name", text: $userManager.userName)
-                            .textFieldStyle(RoundedBorderTextFieldStyle()) // Simple style for now, or custom
-                            // Let's use a cleaner unstyled textfield with standard font
-                        
-                        if userManager.userName.isEmpty {
-                             Text("Enter your name to personalize your experience.")
-                                .font(.caption)
-                                .foregroundColor(Theme.Colors.textSecondary)
-                        }
-                    }
+                    profileSection
+                    
+                    // Purchases Section
+                    purchasesSection
                     
                     // Statistics Section
                     SettingsSection(title: "Statistics") {
@@ -71,7 +66,6 @@ struct SettingsView: View {
                                     .font(.caption)
                                     .foregroundColor(Theme.Colors.textSecondary)
                             }
-                            // Don't add divider for the last item - simplified for now
                             if stat.id != viewModel.languageStats.last?.id {
                                 Divider().background(Theme.Colors.divider)
                             }
@@ -187,12 +181,109 @@ struct SettingsView: View {
         }
     }
     
-    private func resetAllData() {
-        for word in wordRepository.words {
-            dataManager.deleteWord(word)
+    // MARK: - Profile Section
+    
+    @ViewBuilder
+    private var profileSection: some View {
+        SettingsSection(title: "Profile") {
+            VStack(spacing: 12) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(Theme.Colors.textSecondary.opacity(0.1))
+                            .frame(width: 44, height: 44)
+                        
+                        Image(systemName: "iphone")
+                            .font(.title3)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Local Profile")
+                            .font(.headline)
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                        
+                        Text("Your vocabulary and progress are saved on this device.")
+                            .font(.caption)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+                    
+                    Spacer()
+                }
+                
+                TextField("Your Name", text: $userManager.displayName)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            }
         }
+    }
+    
+    // MARK: - Purchases Section
+    
+    @ViewBuilder
+    private var purchasesSection: some View {
+        SettingsSection(title: "Purchases") {
+            HStack {
+                Image(systemName: storeManager.isDailyStoriesActive ? "checkmark.circle.fill" : "lock.fill")
+                    .foregroundStyle(storeManager.isDailyStoriesActive ? Theme.Colors.success : Theme.Colors.textSecondary)
+                
+                Theme.Typography.body("Daily Stories Subscription")
+                    .foregroundColor(Theme.Colors.textPrimary)
+                
+                Spacer()
+                
+                if storeManager.isDailyStoriesActive {
+                    Text("Active")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Theme.Colors.success)
+                } else {
+                    Text("Inactive")
+                        .font(.caption)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+            }
+            
+            Divider().background(Theme.Colors.divider)
+            
+            Button(action: {
+                Task { await storeManager.restorePurchases() }
+            }) {
+                HStack {
+                    Image(systemName: "arrow.clockwise")
+                    Theme.Typography.body("Restore Purchases")
+                }
+                .foregroundColor(Theme.Colors.accent)
+            }
+            
+            if storeManager.isDailyStoriesActive {
+                Divider().background(Theme.Colors.divider)
+                
+                Button(action: {
+                    Task { await storeManager.manageSubscriptions() }
+                }) {
+                    HStack {
+                        Image(systemName: "creditcard")
+                        Theme.Typography.body("Manage Subscription")
+                    }
+                    .foregroundColor(Theme.Colors.accent)
+                }
+            }
+            
+            if let error = storeManager.purchaseError {
+                Divider().background(Theme.Colors.divider)
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(Theme.Colors.error)
+            }
+        }
+    }
+    
+    // MARK: - Helpers
+    
+    private func resetAllData() {
+        dataManager.deleteAllLearningData()
         StudyHistoryManager.shared.reset()
-        userManager.reset()
+        userManager.resetProfile()
         NotificationManager.shared.updateNotificationsAndBadge(
             dueCount: 0,
             hour: dataManager.notificationHour,
@@ -373,4 +464,4 @@ struct ExportDataView: View {
             userManager: UserManager.shared
         )
     }
-} 
+}

@@ -8,7 +8,6 @@ struct DashboardView: View {
     @StateObject private var viewModel: DashboardViewModel
     @State private var showingAddWord = false
     @State private var showingQuiz = false
-    @State private var showingOnboarding = false
     
     init(
         wordRepository: WordRepository,
@@ -35,8 +34,8 @@ struct DashboardView: View {
                     // Welcome Section
 
                     VStack(spacing: 8) {
-                        if !userManager.userName.isEmpty {
-                            Theme.Typography.display("Welcome, \(userManager.userName)")
+                        if !userManager.displayName.isEmpty {
+                            Theme.Typography.display("Welcome, \(userManager.displayName)")
                                 .foregroundStyle(Theme.Colors.textPrimary)
                                 .multilineTextAlignment(.center)
                         } else {
@@ -119,15 +118,9 @@ struct DashboardView: View {
                     dataManager: dataManager
                 )
             }
-            .sheet(isPresented: $showingOnboarding) {
-                NameOnboardingView(userManager: userManager)
-            }
         }
         .onAppear {
             viewModel.refresh()
-            if userManager.shouldShowOnboarding {
-                showingOnboarding = true
-            }
         }
     }
 }

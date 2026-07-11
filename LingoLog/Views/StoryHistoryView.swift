@@ -2,12 +2,16 @@ import SwiftUI
 
 struct StoryHistoryView: View {
     @ObservedObject var viewModel: StoryViewModel
+    @ObservedObject var storeManager: StoreManager = .shared
+    @State private var showingPaywall = false
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 16) {
-                    if viewModel.storyHistory.isEmpty {
+                    if !storeManager.isDailyStoriesActive {
+                        lockedStateView
+                    } else if viewModel.storyHistory.isEmpty {
                         emptyStateView
                     } else {
                         // Language Filter
@@ -44,6 +48,9 @@ struct StoryHistoryView: View {
             }
         }
         .navigationViewStyle(.stack)
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView(storeManager: storeManager)
+        }
     }
     
     // MARK: - Empty State
@@ -73,6 +80,41 @@ struct StoryHistoryView: View {
                 viewModel.goBack()
             }) {
                 Text("Go Back")
+                    .frame(maxWidth: .infinity)
+            }
+            .primaryButtonStyle()
+            .padding(.top, 8)
+        }
+        .padding(32)
+        .glassCard()
+        .padding(.top, 40)
+    }
+    
+    private var lockedStateView: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(Theme.Colors.accent.opacity(0.1))
+                    .frame(width: 100, height: 100)
+                
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(Theme.Colors.accent)
+            }
+            
+            VStack(spacing: 8) {
+                Theme.Typography.title("Daily Stories")
+                    .foregroundStyle(Theme.Colors.textPrimary)
+                
+                Theme.Typography.body("Subscribe to read your story history.")
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            
+            Button(action: {
+                showingPaywall = true
+            }) {
+                Text("Subscribe")
                     .frame(maxWidth: .infinity)
             }
             .primaryButtonStyle()
@@ -116,7 +158,11 @@ struct StoryHistoryView: View {
         LazyVStack(spacing: 12) {
             ForEach(viewModel.storyHistory) { story in
                 StoryHistoryCard(story: story) {
-                    viewModel.selectStory(story)
+                    if storeManager.isDailyStoriesActive {
+                        viewModel.selectStory(story)
+                    } else {
+                        showingPaywall = true
+                    }
                 }
             }
         }

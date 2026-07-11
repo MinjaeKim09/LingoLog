@@ -7,21 +7,33 @@
 
 import SwiftUI
 import UserNotifications
+import FirebaseAppCheck
+import FirebaseCore
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        #if DEBUG
+        AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
+        #else
+        AppCheck.setAppCheckProviderFactory(DeviceCheckProviderFactory())
+        #endif
+        FirebaseApp.configure()
+        return true
+    }
+    
+}
 
 @main
 struct LingoLogApp: App {
-    let dataManager = DataManager.shared
-    let wordRepository: WordRepository
-    let storyRepository: StoryRepository
-    let userManager = UserManager.shared
-    let translationService = TranslationService.shared
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    
+    private let environment: AppEnvironment
     @Environment(\.scenePhase) private var scenePhase
-    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
+    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = false
     
     init() {
-        self.wordRepository = WordRepository(dataManager: dataManager)
-        self.storyRepository = StoryRepository(dataManager: dataManager)
-        NotificationManager.shared.requestAuthorization()
+        self.environment = AppEnvironment()
     }
     
     var body: some Scene {
@@ -29,11 +41,7 @@ struct LingoLogApp: App {
             ZStack {
                 Theme.Colors.background.ignoresSafeArea()
                 ContentView(
-                    dataManager: dataManager,
-                    wordRepository: wordRepository,
-                    storyRepository: storyRepository,
-                    userManager: userManager,
-                    translationService: translationService
+                    environment: environment
                 )
                     .onAppear {
                         updateNotificationsAndBadge()
@@ -48,11 +56,11 @@ struct LingoLogApp: App {
     }
     
     private func updateNotificationsAndBadge() {
-        wordRepository.refresh()
+        environment.wordRepository.refresh()
         NotificationManager.shared.updateNotificationsAndBadge(
-            dueCount: wordRepository.dueWords().count,
-            hour: dataManager.notificationHour,
-            minute: dataManager.notificationMinute,
+            dueCount: environment.wordRepository.dueWords().count,
+            hour: environment.dataManager.notificationHour,
+            minute: environment.dataManager.notificationMinute,
             notificationsEnabled: notificationsEnabled
         )
     }
