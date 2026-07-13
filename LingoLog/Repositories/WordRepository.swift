@@ -59,8 +59,9 @@ final class WordRepository: ObservableObject {
         return words.filter { $0.language == language }
     }
     
-    func dueWords(referenceDate: Date = Date()) -> [WordEntry] {
+    func dueWords(for language: String? = nil, referenceDate: Date = Date()) -> [WordEntry] {
         words.filter { word in
+            guard language == nil || word.language == language else { return false }
             guard !word.isMastered else { return false }
             guard let nextReviewDate = word.nextReviewDate else { return true }
             return nextReviewDate <= referenceDate

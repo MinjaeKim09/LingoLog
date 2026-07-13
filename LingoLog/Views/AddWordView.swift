@@ -4,149 +4,97 @@ struct AddWordView: View {
     @Environment(\.dismiss) private var dismiss
     let dataManager: DataManager
     let translationService: TranslationService
+    let languageSpaceManager: LanguageSpaceManager
     @StateObject private var viewModel: AddWordViewModel
-    
-    @State private var showingSourcePicker = false
-    @State private var showingTargetPicker = false
-    
-    // Add state for animation
-    @State private var isSwapped = false
-    
-    init(dataManager: DataManager, translationService: TranslationService) {
+
+    @State private var showingContext = false
+
+    init(
+        dataManager: DataManager,
+        translationService: TranslationService,
+        languageSpaceManager: LanguageSpaceManager
+    ) {
         self.dataManager = dataManager
         self.translationService = translationService
+        self.languageSpaceManager = languageSpaceManager
         _viewModel = StateObject(
             wrappedValue: AddWordViewModel(
                 dataManager: dataManager,
-                translationService: translationService
+                translationService: translationService,
+                languageSpaceManager: languageSpaceManager
             )
         )
     }
-    
-    private func swapLanguages() {
-        viewModel.swapLanguages()
-        isSwapped.toggle()
-    }
-    
+
     var body: some View {
-        ZStack {
-            Theme.Colors.background.ignoresSafeArea()
-            
-            NavigationView {
+        NavigationStack {
+            ZStack {
+                Theme.Colors.background.ignoresSafeArea()
+
                 ScrollView {
-                    VStack(spacing: 24) {
-                        // Input Section
+                    VStack(alignment: .leading, spacing: 20) {
+                        if let space = viewModel.space {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(space.subtitle)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Theme.Colors.accent)
+                                Text("Add a term in either language. LingoLog saves it as \(space.learningLanguageName) for this space.")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                            }
+                        }
+
                         VStack(alignment: .leading, spacing: 12) {
-                            Theme.Typography.title("Word or Phrase")
+                            Theme.Typography.title("\(viewModel.inputLanguageName) word or phrase")
                                 .foregroundColor(Theme.Colors.textPrimary)
-                            
-                            TextField("Type or paste here", text: $viewModel.inputText)
-                                .padding()
-                                .background(Theme.Colors.inputBackground)
-                                .cornerRadius(12)
-                                .font(.system(.body, design: .rounded))
-                                .autocapitalization(.none)
-                                .disableAutocorrection(true)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Theme.Colors.divider, lineWidth: 1)
-                                )
+
+                            TextField(
+                                "Type or paste in \(viewModel.inputLanguageName)",
+                                text: $viewModel.inputText
+                            )
+                            .padding()
+                            .background(Theme.Colors.inputBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .font(.system(.body, design: .rounded))
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Theme.Colors.divider, lineWidth: 1)
+                            )
+
+                            Button(viewModel.switchInputLanguageLabel) {
+                                viewModel.switchInputLanguage()
+                            }
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.Colors.accent)
+                            .disabled(viewModel.isTranslating || !viewModel.languagePairIsValid)
                         }
                         .padding()
                         .glassCard()
-                        
-                        // Languages Section
-                        HStack(alignment: .bottom, spacing: 12) {
-                            // Translate From
-                            VStack(alignment: .leading, spacing: 8) {
-                                Theme.Typography.body("From")
-                                    .font(.caption)
-                                    .foregroundColor(Theme.Colors.textSecondary)
-                                
-                                Button(action: { showingSourcePicker = true }) {
-                                    HStack {
-                                        Text(viewModel.languageName(for: viewModel.sourceLanguage))
-                                            .foregroundColor(Theme.Colors.textPrimary)
-                                            .lineLimit(1)
-                                            .truncationMode(.tail)
-                                        Spacer()
-                                        Image(systemName: "chevron.down")
-                                            .font(.caption)
-                                            .foregroundColor(Theme.Colors.textSecondary)
-                                    }
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                                    .background(Theme.Colors.inputBackground)
-                                    .cornerRadius(8)
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            
-                            // Swap Button
-                            Button(action: swapLanguages) {
-                                Image(systemName: "arrow.left.arrow.right")
-                                    .foregroundColor(Theme.Colors.accent)
-                                    .padding(8)
-                                    .background(Theme.Colors.accent.opacity(0.1))
-                                    .clipShape(Circle())
-                                    .rotationEffect(.degrees(isSwapped ? 180 : 0))
-                                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSwapped)
-                            }
-                            .padding(.bottom, 6)
-                            
-                            // Translate To
-                            VStack(alignment: .leading, spacing: 8) {
-                                Theme.Typography.body("To")
-                                    .font(.caption)
-                                    .foregroundColor(Theme.Colors.textSecondary)
-                                
-                                Button(action: { showingTargetPicker = true }) {
-                                    HStack {
-                                        Text(viewModel.languageName(for: viewModel.targetLanguage))
-                                            .foregroundColor(Theme.Colors.textPrimary)
-                                            .lineLimit(1)
-                                            .truncationMode(.tail)
-                                        Spacer()
-                                        Image(systemName: "chevron.down")
-                                            .font(.caption)
-                                            .foregroundColor(Theme.Colors.textSecondary)
-                                    }
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                                    .background(Theme.Colors.inputBackground)
-                                    .cornerRadius(8)
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .padding()
-                        .glassCard()
-                        
-                        // Status & Result
+
                         if viewModel.isTranslating && viewModel.translation == nil {
                             HStack(spacing: 12) {
                                 ProgressView()
-                                Theme.Typography.body("Translating...")
-                                    .foregroundColor(Theme.Colors.textSecondary)
+                                Text("Translating…")
+                                    .foregroundStyle(Theme.Colors.textSecondary)
                             }
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding()
                             .glassCard()
                         }
-                        
+
                         if let translated = viewModel.translation, !translated.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 10) {
                                 HStack {
-                                    Theme.Typography.title("Translation")
+                                    Theme.Typography.title("\(viewModel.outputLanguageName) \(viewModel.inputSide == .learningLanguage ? "meaning" : "term")")
                                         .foregroundColor(Theme.Colors.textPrimary)
-                                    
+                                    Spacer()
                                     if viewModel.isTranslating {
-                                        Spacer()
-                                        ProgressView()
-                                            .scaleEffect(0.8)
+                                        ProgressView().scaleEffect(0.75)
                                     }
                                 }
-                                
+
                                 Text(translated)
                                     .font(.system(.title3, design: .serif))
                                     .fontWeight(.medium)
@@ -154,94 +102,57 @@ struct AddWordView: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding()
                                     .background(Theme.Colors.accent.opacity(0.1))
-                                    .cornerRadius(12)
-                                    .contentTransition(.opacity)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
                             .padding()
                             .glassCard()
-                            .transition(.asymmetric(
-                                insertion: .opacity.combined(with: .move(edge: .top)),
-                                removal: .opacity
-                            ))
                         }
-                        
-                        if let error = viewModel.errorMessage {
-                            Text(error)
-                                .foregroundColor(Theme.Colors.error)
-                                .font(.caption)
-                                .padding()
-                                .glassCard()
+
+                        DisclosureGroup("Add context (optional)", isExpanded: $showingContext) {
+                            TextField("Where did you see this?", text: $viewModel.context)
+                                .padding(.top, 10)
+                                .textFieldStyle(.roundedBorder)
                         }
-                        
-                        // Context Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            Theme.Typography.title("Context (Optional)")
-                                .foregroundColor(Theme.Colors.textPrimary)
-                            
-                            TextField("Where did you see this? (e.g., K-drama)", text: $viewModel.context)
-                                .padding()
-                                .background(Theme.Colors.inputBackground)
-                                .cornerRadius(12)
-                                .font(.system(.body, design: .rounded))
-                                .autocapitalization(.sentences)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Theme.Colors.divider, lineWidth: 1)
-                                )
-                        }
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                         .padding()
                         .glassCard()
+
+                        if let error = viewModel.errorMessage {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(Theme.Colors.error)
+                        }
                     }
                     .padding()
                 }
-
-                .navigationTitle("Add New Word")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Cancel") { dismiss() }
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                    }
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button {
-                            viewModel.saveTranslation()
+            }
+            .navigationTitle("Add \(viewModel.space?.learningLanguageName ?? "Word")")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        if viewModel.saveTranslation() {
                             dismiss()
-                        } label: {
-                            Text("Save")
-                                .fontWeight(.semibold)
                         }
-                        .disabled(viewModel.translation == nil || viewModel.translation?.isEmpty == true)
-                        .foregroundStyle(viewModel.translation == nil || viewModel.translation?.isEmpty == true ? Color.gray : Theme.Colors.accent)
                     }
+                    .fontWeight(.semibold)
+                    .disabled(!viewModel.canSave)
+                    .foregroundStyle(viewModel.canSave ? Theme.Colors.accent : Color.gray)
                 }
             }
-            .navigationViewStyle(.stack)
-            .sheet(isPresented: $showingSourcePicker) {
-                LanguagePickerView(
-                    selectedLanguage: $viewModel.sourceLanguage,
-                    title: "Translate From",
-                    languages: viewModel.allLanguages
-                )
-            }
-            .sheet(isPresented: $showingTargetPicker) {
-                LanguagePickerView(
-                    selectedLanguage: $viewModel.targetLanguage,
-                    title: "Translate To",
-                    languages: viewModel.allLanguages
-                )
-            }
-            .task {
-                await viewModel.loadLanguages()
-            }
         }
-
     }
-    
 }
 
 #Preview {
     AddWordView(
         dataManager: DataManager.shared,
-        translationService: TranslationService.shared
+        translationService: TranslationService.shared,
+        languageSpaceManager: LanguageSpaceManager.shared
     )
-} 
+}

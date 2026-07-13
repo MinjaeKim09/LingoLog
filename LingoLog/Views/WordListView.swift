@@ -5,37 +5,43 @@ struct WordListView: View {
     let dataManager: DataManager
     let translationService: TranslationService
     let wordRepository: WordRepository
+    @ObservedObject var languageSpaceManager: LanguageSpaceManager
+    @ObservedObject var storeManager: StoreManager
     @StateObject private var viewModel: WordListViewModel
     @State private var showingAddWord = false
     @State private var wordToEditID: NSManagedObjectID?
+    @State private var showingLanguageSpaces = false
     
-    init(wordRepository: WordRepository, dataManager: DataManager, translationService: TranslationService) {
+    init(
+        wordRepository: WordRepository,
+        dataManager: DataManager,
+        translationService: TranslationService,
+        languageSpaceManager: LanguageSpaceManager,
+        storeManager: StoreManager
+    ) {
         self.dataManager = dataManager
         self.translationService = translationService
         self.wordRepository = wordRepository
-        _viewModel = StateObject(wrappedValue: WordListViewModel(wordRepository: wordRepository))
+        self.languageSpaceManager = languageSpaceManager
+        self.storeManager = storeManager
+        _viewModel = StateObject(wrappedValue: WordListViewModel(
+            wordRepository: wordRepository,
+            languageSpaceManager: languageSpaceManager
+        ))
     }
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Your words")
+                    Text("Your \(languageSpaceManager.activeSpace?.learningLanguageName ?? "") words")
                         .font(.system(size: 38, weight: .regular))
                         .tracking(-1)
                         .foregroundStyle(Theme.Colors.textPrimary)
                         .padding(.horizontal)
-                    // Language Filter
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(viewModel.availableLanguages, id: \.self) { language in
-                                LanguageFilterButton(
-                                    language: language,
-                                    isSelected: viewModel.selectedLanguage == language
-                                ) {
-                                    viewModel.selectedLanguage = language
-                                }
-                            }
+                    if let space = languageSpaceManager.activeSpace {
+                        LanguageSpaceSwitcher(space: space) {
+                            showingLanguageSpaces = true
                         }
                         .padding(.horizontal)
                     }
@@ -101,7 +107,8 @@ struct WordListView: View {
             .sheet(isPresented: $showingAddWord) {
                 AddWordView(
                     dataManager: dataManager,
-                    translationService: translationService
+                    translationService: translationService,
+                    languageSpaceManager: languageSpaceManager
                 )
             }
             .sheet(isPresented: Binding(
@@ -112,6 +119,13 @@ struct WordListView: View {
                    let wordEntry = wordRepository.wordEntry(for: objectID) {
                     EditWordView(word: wordEntry, dataManager: dataManager)
                 }
+            }
+            .sheet(isPresented: $showingLanguageSpaces) {
+                LanguageSpacesView(
+                    languageSpaceManager: languageSpaceManager,
+                    storeManager: storeManager,
+                    translationService: translationService
+                )
             }
         }
     }
@@ -143,14 +157,6 @@ struct WordRowView: View {
                         }
                     }
                     
-                    Text(word.language)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Theme.Colors.secondaryAccent.opacity(0.1))
-                        .foregroundColor(Theme.Colors.secondaryAccent)
-                        .cornerRadius(8)
                 }
             }
             
@@ -188,39 +194,15 @@ struct WordRowView: View {
     }
 }
 
-struct LanguageFilterButton: View {
-    let language: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(language)
-                .font(.system(.subheadline, design: .rounded))
-                .fontWeight(isSelected ? .semibold : .regular)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .foregroundColor(isSelected ? .white : Theme.Colors.textPrimary)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(isSelected ? Theme.Colors.accent : Theme.Colors.inputBackground)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(isSelected ? Theme.Colors.accent : Theme.Colors.divider, lineWidth: 1)
-        )
-        .shadow(color: isSelected ? Color.black.opacity(0.15) : Color.clear, radius: 4, x: 0, y: 2)
-    }
-}
-
 #Preview {
     ZStack {
         Theme.Colors.background.ignoresSafeArea()
         WordListView(
             wordRepository: WordRepository(dataManager: DataManager.shared),
             dataManager: DataManager.shared,
-            translationService: TranslationService.shared
+            translationService: TranslationService.shared,
+            languageSpaceManager: LanguageSpaceManager.shared,
+            storeManager: StoreManager.shared
         )
     }
 }

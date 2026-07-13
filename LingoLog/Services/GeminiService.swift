@@ -64,8 +64,13 @@ private struct StoryGenerationRequest: Encodable {
 }
 
 private struct StoryGenerationWord: Encodable {
-    let word: String
-    let translation: String
+    let term: String
+    let meaning: String
+
+    enum CodingKeys: String, CodingKey {
+        case term = "word"
+        case meaning = "translation"
+    }
 }
 
 private struct StoryServiceErrorResponse: Decodable {
@@ -104,7 +109,7 @@ class GeminiService {
         
         let requestWords = words.compactMap { word -> StoryGenerationWord? in
             guard let source = word.word, let translation = word.translation else { return nil }
-            return StoryGenerationWord(word: source, translation: translation)
+            return StoryGenerationWord(term: source, meaning: translation)
         }
         
         let payload = StoryGenerationRequest(

@@ -3,18 +3,28 @@ import SwiftUI
 struct QuizView: View {
     let wordRepository: WordRepository
     let dataManager: DataManager
+    @ObservedObject var languageSpaceManager: LanguageSpaceManager
     @State private var showingSession = false
     @StateObject private var homeViewModel: QuizHomeViewModel
     @StateObject private var sessionViewModel: QuizSessionViewModel
     
-    init(wordRepository: WordRepository, dataManager: DataManager) {
+    init(
+        wordRepository: WordRepository,
+        dataManager: DataManager,
+        languageSpaceManager: LanguageSpaceManager
+    ) {
         self.wordRepository = wordRepository
         self.dataManager = dataManager
-        _homeViewModel = StateObject(wrappedValue: QuizHomeViewModel(wordRepository: wordRepository))
+        self.languageSpaceManager = languageSpaceManager
+        _homeViewModel = StateObject(wrappedValue: QuizHomeViewModel(
+            wordRepository: wordRepository,
+            languageSpaceManager: languageSpaceManager
+        ))
         _sessionViewModel = StateObject(
             wrappedValue: QuizSessionViewModel(
                 wordRepository: wordRepository,
-                dataManager: dataManager
+                dataManager: dataManager,
+                languageSpaceManager: languageSpaceManager
             )
         )
     }
@@ -53,6 +63,7 @@ struct QuizView: View {
 #Preview {
     QuizView(
         wordRepository: WordRepository(dataManager: DataManager.shared),
-        dataManager: DataManager.shared
+        dataManager: DataManager.shared,
+        languageSpaceManager: LanguageSpaceManager.shared
     )
 }

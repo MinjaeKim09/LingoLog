@@ -9,11 +9,10 @@ struct StoryHomeView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Header
                     VStack(spacing: 8) {
                         Theme.Typography.display("Daily Stories")
                             .foregroundStyle(Theme.Colors.textPrimary)
-                        Theme.Typography.body("Learn through reading")
+                        Theme.Typography.body("\(viewModel.activeLanguageName) vocabulary, brought to life")
                             .foregroundStyle(Theme.Colors.textSecondary)
                     }
                     .padding(.top, 20)
@@ -25,9 +24,6 @@ struct StoryHomeView: View {
                         // No words added yet
                         noWordsView
                     } else {
-                        // Language Picker
-                        languagePickerSection
-                        
                         // Today's Story Card
                         todayStorySection
                         
@@ -54,6 +50,9 @@ struct StoryHomeView: View {
         .navigationViewStyle(.stack)
         .sheet(isPresented: $showingPaywall) {
             PaywallView(storeManager: storeManager)
+        }
+        .task {
+            await viewModel.loadSupportedLanguages()
         }
     }
     
@@ -102,45 +101,13 @@ struct StoryHomeView: View {
                 Theme.Typography.title("Add Words First")
                     .foregroundStyle(Theme.Colors.textPrimary)
                 
-                Theme.Typography.body("Add some vocabulary words to generate personalized stories")
+                Theme.Typography.body("Add \(viewModel.activeLanguageName) vocabulary to generate a personalized story")
                     .foregroundStyle(Theme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
             }
         }
         .padding(32)
         .glassCard()
-    }
-    
-    // MARK: - Language Picker Section
-    
-    private var languagePickerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Theme.Typography.title("Language")
-                .font(.headline)
-                .foregroundColor(Theme.Colors.textSecondary)
-                .padding(.leading, 4)
-            
-            HStack {
-                Theme.Typography.body("Story Language")
-                    .foregroundColor(Theme.Colors.textPrimary)
-                Spacer()
-                
-                Picker("Language", selection: $viewModel.selectedLanguage) {
-                    ForEach(viewModel.availableLanguages, id: \.self) { language in
-                        Text(language).tag(language)
-                    }
-                }
-                .pickerStyle(.menu)
-                .tint(Theme.Colors.accent)
-            }
-            .padding()
-            .glassCard()
-            
-            Text("\(viewModel.wordsForSelectedLanguage.count) words available")
-                .font(.caption)
-                .foregroundColor(Theme.Colors.textSecondary)
-                .padding(.leading, 4)
-        }
     }
     
     // MARK: - Today's Story Section
@@ -387,6 +354,7 @@ struct StoryHistoryRow: View {
 #Preview {
     StoryHomeView(viewModel: StoryViewModel(
         wordRepository: WordRepository(dataManager: DataManager.shared),
-        storyRepository: StoryRepository(dataManager: DataManager.shared)
+        storyRepository: StoryRepository(dataManager: DataManager.shared),
+        languageSpaceManager: LanguageSpaceManager.shared
     ))
 }

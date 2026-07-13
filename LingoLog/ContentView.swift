@@ -9,15 +9,36 @@ import SwiftUI
 
 struct ContentView: View {
     let environment: AppEnvironment
+    @ObservedObject private var languageSpaceManager: LanguageSpaceManager
     @State private var selection = 0
+
+    init(environment: AppEnvironment) {
+        self.environment = environment
+        _languageSpaceManager = ObservedObject(wrappedValue: environment.languageSpaceManager)
+    }
     
     var body: some View {
+        Group {
+            if languageSpaceManager.activeSpace == nil {
+                FirstLanguageSpaceView(
+                    languageSpaceManager: environment.languageSpaceManager,
+                    translationService: environment.translationService
+                )
+            } else {
+                mainTabs
+            }
+        }
+    }
+
+    private var mainTabs: some View {
         TabView(selection: $selection) {
             DashboardView(
                 wordRepository: environment.wordRepository,
                 dataManager: environment.dataManager,
                 userManager: environment.userManager,
-                translationService: environment.translationService
+                translationService: environment.translationService,
+                languageSpaceManager: environment.languageSpaceManager,
+                storeManager: environment.storeManager
             )
                 .tabItem {
                     Image(systemName: "house.fill")
@@ -27,7 +48,9 @@ struct ContentView: View {
             WordListView(
                 wordRepository: environment.wordRepository,
                 dataManager: environment.dataManager,
-                translationService: environment.translationService
+                translationService: environment.translationService,
+                languageSpaceManager: environment.languageSpaceManager,
+                storeManager: environment.storeManager
             )
                 .tabItem {
                     Image(systemName: "book.fill")
@@ -36,7 +59,8 @@ struct ContentView: View {
             
             QuizView(
                 wordRepository: environment.wordRepository,
-                dataManager: environment.dataManager
+                dataManager: environment.dataManager,
+                languageSpaceManager: environment.languageSpaceManager
             )
                 .tabItem {
                     Image(systemName: "brain.head.profile")
@@ -47,7 +71,8 @@ struct ContentView: View {
                 wordRepository: environment.wordRepository,
                 storyRepository: environment.storyRepository,
                 storyService: environment.storyService,
-                storeManager: environment.storeManager
+                storeManager: environment.storeManager,
+                languageSpaceManager: environment.languageSpaceManager
             )
                 .tabItem {
                     Image(systemName: "book.pages.fill")
@@ -58,7 +83,9 @@ struct ContentView: View {
                 wordRepository: environment.wordRepository,
                 dataManager: environment.dataManager,
                 userManager: environment.userManager,
-                storeManager: environment.storeManager
+                storeManager: environment.storeManager,
+                translationService: environment.translationService,
+                languageSpaceManager: environment.languageSpaceManager
             )
                 .tabItem {
                     Image(systemName: "gear")

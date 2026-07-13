@@ -5,16 +5,32 @@ struct DashboardView: View {
     let dataManager: DataManager
     let wordRepository: WordRepository
     let translationService: TranslationService
+    @ObservedObject var languageSpaceManager: LanguageSpaceManager
+    @ObservedObject var storeManager: StoreManager
     @StateObject private var viewModel: DashboardViewModel
     @State private var showingAddWord = false
     @State private var showingQuiz = false
+    @State private var showingLanguageSpaces = false
 
-    init(wordRepository: WordRepository, dataManager: DataManager, userManager: UserManager, translationService: TranslationService) {
+    init(
+        wordRepository: WordRepository,
+        dataManager: DataManager,
+        userManager: UserManager,
+        translationService: TranslationService,
+        languageSpaceManager: LanguageSpaceManager,
+        storeManager: StoreManager
+    ) {
         self.wordRepository = wordRepository
         self.dataManager = dataManager
         self.userManager = userManager
         self.translationService = translationService
-        _viewModel = StateObject(wrappedValue: DashboardViewModel(wordRepository: wordRepository, dataManager: dataManager))
+        self.languageSpaceManager = languageSpaceManager
+        self.storeManager = storeManager
+        _viewModel = StateObject(wrappedValue: DashboardViewModel(
+            wordRepository: wordRepository,
+            dataManager: dataManager,
+            languageSpaceManager: languageSpaceManager
+        ))
     }
 
     private var greeting: String {
@@ -38,11 +54,22 @@ struct DashboardView: View {
                         Text("Build a vocabulary that stays with you.")
                             .font(.title3)
                             .foregroundStyle(Theme.Colors.textSecondary)
+
+                        if let space = languageSpaceManager.activeSpace {
+                            LanguageSpaceSwitcher(space: space) {
+                                showingLanguageSpaces = true
+                            }
+                            .padding(.top, 2)
+                        }
                     }
                     .padding(.top, 12)
 
                     HStack(spacing: 12) {
-                        QuickActionButton(title: "Add a word", subtitle: "Capture something new", icon: "plus") { showingAddWord = true }
+                        QuickActionButton(
+                            title: "Add a word",
+                            subtitle: languageSpaceManager.activeSpace.map { "Add \($0.learningLanguageName)" } ?? "Capture something new",
+                            icon: "plus"
+                        ) { showingAddWord = true }
                         QuickActionButton(title: "Review", subtitle: "\(viewModel.wordsDueForReview) ready today", icon: "arrow.right") { showingQuiz = true }
                     }
 
@@ -81,8 +108,11 @@ struct DashboardView: View {
                     .padding(24)
                     .glassCard()
 
-                    if !wordRepository.words.isEmpty {
-                        RecentWordsSection(wordRepository: wordRepository)
+                    if viewModel.totalWords > 0 {
+                        RecentWordsSection(
+                            wordRepository: wordRepository,
+                            languageCode: languageSpaceManager.activeSpace?.learningLanguageCode
+                        )
                     } else {
                         EmptyStateView()
                     }
@@ -93,8 +123,27 @@ struct DashboardView: View {
             .scrollIndicators(.hidden)
             .background(Theme.Colors.background)
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $showingAddWord) { AddWordView(dataManager: dataManager, translationService: translationService) }
-            .sheet(isPresented: $showingQuiz) { QuizView(wordRepository: wordRepository, dataManager: dataManager) }
+            .sheet(isPresented: $showingAddWord) {
+                AddWordView(
+                    dataManager: dataManager,
+                    translationService: translationService,
+                    languageSpaceManager: languageSpaceManager
+                )
+            }
+            .sheet(isPresented: $showingQuiz) {
+                QuizView(
+                    wordRepository: wordRepository,
+                    dataManager: dataManager,
+                    languageSpaceManager: languageSpaceManager
+                )
+            }
+            .sheet(isPresented: $showingLanguageSpaces) {
+                LanguageSpacesView(
+                    languageSpaceManager: languageSpaceManager,
+                    storeManager: storeManager,
+                    translationService: translationService
+                )
+            }
         }
         .onAppear { viewModel.refresh() }
     }
@@ -133,6 +182,7 @@ struct QuickActionButton: View {
 
 struct RecentWordsSection: View {
     @ObservedObject var wordRepository: WordRepository
+    let languageCode: String?
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -140,7 +190,8 @@ struct RecentWordsSection: View {
                 Spacer()
                 Text("LATEST").font(.caption2.weight(.bold)).tracking(1.2).foregroundStyle(Theme.Colors.textSecondary)
             }.padding(.bottom, 12)
-            ForEach(Array(wordRepository.words.prefix(5)), id: \.id) { word in
+            let recentWords = wordRepository.words(for: languageCode)
+            ForEach(Array(recentWords.prefix(5)), id: \.id) { word in
                 HStack(spacing: 14) {
                     Circle().fill(Theme.Colors.accent).frame(width: 7, height: 7)
                     VStack(alignment: .leading, spacing: 3) {
@@ -151,7 +202,7 @@ struct RecentWordsSection: View {
                     Text(word.language ?? "").font(.caption).foregroundStyle(Theme.Colors.textSecondary)
                 }
                 .padding(.vertical, 15)
-                if word.id != wordRepository.words.prefix(5).last?.id { Divider().foregroundStyle(Theme.Colors.divider) }
+                if word.id != recentWords.prefix(5).last?.id { Divider().foregroundStyle(Theme.Colors.divider) }
             }
         }
         .padding(22)
@@ -170,4 +221,13 @@ struct EmptyStateView: View {
     }
 }
 
-#Preview { DashboardView(wordRepository: WordRepository(dataManager: .shared), dataManager: .shared, userManager: .shared, translationService: .shared) }
+#Preview {
+    DashboardView(
+        wordRepository: WordRepository(dataManager: .shared),
+        dataManager: .shared,
+        userManager: .shared,
+        translationService: .shared,
+        languageSpaceManager: LanguageSpaceManager.shared,
+        storeManager: StoreManager.shared
+    )
+}

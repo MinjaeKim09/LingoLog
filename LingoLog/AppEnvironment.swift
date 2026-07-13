@@ -11,6 +11,7 @@ final class AppEnvironment {
     let translationService: TranslationService
     let storyService: GeminiService
     let storeManager: StoreManager
+    let languageSpaceManager: LanguageSpaceManager
 
     init(
         dataManager: DataManager = .shared,
@@ -24,6 +25,7 @@ final class AppEnvironment {
         self.translationService = translationService
         self.storyService = storyService
         self.storeManager = storeManager
+        self.languageSpaceManager = LanguageSpaceManager(dataManager: dataManager)
         self.wordRepository = WordRepository(dataManager: dataManager)
         self.storyRepository = StoryRepository(dataManager: dataManager)
     }

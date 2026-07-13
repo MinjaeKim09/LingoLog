@@ -36,6 +36,12 @@ final class StoreManager: ObservableObject {
 #endif
     }
 
+    /// Language Spaces are bundled with the Daily Stories subscription. A primary
+    /// learning language remains available so core flashcard study works for everyone.
+    var isLanguageSpacesUnlocked: Bool {
+        isStoryUnlocked
+    }
+
     var storySubscriptionJWS: String? {
 #if DEBUG
         if developerDailyStoriesOverride {

@@ -5,18 +5,34 @@ struct SettingsView: View {
     @ObservedObject var userManager: UserManager
     @ObservedObject var storeManager: StoreManager
     let wordRepository: WordRepository
+    let translationService: TranslationService
+    @ObservedObject var languageSpaceManager: LanguageSpaceManager
     @StateObject private var viewModel: SettingsViewModel
     @State private var showingResetAlert = false
     @State private var showingExportSheet = false
     @State private var showingNotificationSettingsAlert = false
+    @State private var showingLanguageRepair = false
+    @State private var showingLanguageSpaces = false
     @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = false
     
-    init(wordRepository: WordRepository, dataManager: DataManager, userManager: UserManager, storeManager: StoreManager = .shared) {
+    init(
+        wordRepository: WordRepository,
+        dataManager: DataManager,
+        userManager: UserManager,
+        storeManager: StoreManager = .shared,
+        translationService: TranslationService = .shared,
+        languageSpaceManager: LanguageSpaceManager
+    ) {
         self.wordRepository = wordRepository
         self.dataManager = dataManager
         self.userManager = userManager
         self.storeManager = storeManager
-        _viewModel = StateObject(wrappedValue: SettingsViewModel(wordRepository: wordRepository))
+        self.translationService = translationService
+        self.languageSpaceManager = languageSpaceManager
+        _viewModel = StateObject(wrappedValue: SettingsViewModel(
+            wordRepository: wordRepository,
+            languageSpaceManager: languageSpaceManager
+        ))
     }
     
     var notificationTime: Date {
@@ -48,31 +64,37 @@ struct SettingsView: View {
                     developerSection
 #endif
                     
-                    // Statistics Section
-                    SettingsSection(title: "Statistics") {
+                    // Active Space Section
+                    SettingsSection(title: "Learning Space") {
+                        if let space = languageSpaceManager.activeSpace {
+                            Button(action: { showingLanguageSpaces = true }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "rectangle.stack.fill")
+                                        .foregroundStyle(Theme.Colors.accent)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Theme.Typography.body(space.learningLanguageName)
+                                            .foregroundColor(Theme.Colors.textPrimary)
+                                        Text(space.subtitle)
+                                            .font(.caption)
+                                            .foregroundStyle(Theme.Colors.textSecondary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.Colors.textSecondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+
+                            Divider().background(Theme.Colors.divider)
+                        }
+
                         VStack(spacing: 8) {
                             StatisticsRow(title: "Total Words", value: "\(viewModel.totalWords)")
                             Divider().background(Theme.Colors.divider)
                             StatisticsRow(title: "Mastered Words", value: "\(viewModel.masteredWords)")
                             Divider().background(Theme.Colors.divider)
                             StatisticsRow(title: "Words Due for Review", value: "\(viewModel.wordsDueForReview)")
-                        }
-                    }
-                    
-                    // Languages Section
-                    SettingsSection(title: "Languages") {
-                        ForEach(viewModel.languageStats) { stat in
-                            HStack {
-                                Theme.Typography.body(stat.language)
-                                    .foregroundColor(Theme.Colors.textPrimary)
-                                Spacer()
-                                Text("\(stat.count) words")
-                                    .font(.caption)
-                                    .foregroundColor(Theme.Colors.textSecondary)
-                            }
-                            if stat.id != viewModel.languageStats.last?.id {
-                                Divider().background(Theme.Colors.divider)
-                            }
                         }
                     }
                     
@@ -110,6 +132,16 @@ struct SettingsView: View {
                             HStack {
                                 Image(systemName: "square.and.arrow.up")
                                 Theme.Typography.body("Export Data")
+                            }
+                            .foregroundColor(Theme.Colors.accent)
+                        }
+
+                        Divider().background(Theme.Colors.divider)
+
+                        Button(action: { showingLanguageRepair = true }) {
+                            HStack {
+                                Image(systemName: "character.book.closed")
+                                Theme.Typography.body("Correct Vocabulary Language")
                             }
                             .foregroundColor(Theme.Colors.accent)
                         }
@@ -182,6 +214,21 @@ struct SettingsView: View {
             .sheet(isPresented: $showingExportSheet) {
                 ExportDataView(dataManager: dataManager)
             }
+            .sheet(isPresented: $showingLanguageRepair) {
+                VocabularyLanguageRepairView(
+                    wordRepository: wordRepository,
+                    dataManager: dataManager,
+                    translationService: translationService,
+                    languageSpaceManager: languageSpaceManager
+                )
+            }
+            .sheet(isPresented: $showingLanguageSpaces) {
+                LanguageSpacesView(
+                    languageSpaceManager: languageSpaceManager,
+                    storeManager: storeManager,
+                    translationService: translationService
+                )
+            }
         }
     }
     
@@ -230,7 +277,7 @@ struct SettingsView: View {
                 Image(systemName: storeManager.isDailyStoriesActive ? "checkmark.circle.fill" : "lock.fill")
                     .foregroundStyle(storeManager.isDailyStoriesActive ? Theme.Colors.success : Theme.Colors.textSecondary)
                 
-                Theme.Typography.body("Daily Stories Subscription")
+                Theme.Typography.body("Daily Stories + Spaces")
                     .foregroundColor(Theme.Colors.textPrimary)
                 
                 Spacer()
@@ -292,7 +339,7 @@ struct SettingsView: View {
                 )
             ) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Theme.Typography.body("Unlock Daily Stories")
+                    Theme.Typography.body("Unlock Daily Stories + Spaces")
                         .foregroundColor(Theme.Colors.textPrimary)
                     Text("Debug build only — bypasses StoreKit using the development backend.")
                         .font(.caption)
@@ -308,6 +355,7 @@ struct SettingsView: View {
     
     private func resetAllData() {
         dataManager.deleteAllLearningData()
+        languageSpaceManager.resetSpaces()
         StudyHistoryManager.shared.reset()
         userManager.resetProfile()
         NotificationManager.shared.updateNotificationsAndBadge(
@@ -346,6 +394,125 @@ struct SettingsView: View {
             minute: dataManager.notificationMinute,
             notificationsEnabled: notificationsEnabled
         )
+    }
+}
+
+struct VocabularyLanguageRepairView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var wordRepository: WordRepository
+    let dataManager: DataManager
+    let translationService: TranslationService
+    let languageSpaceManager: LanguageSpaceManager
+
+    @State private var languages: [Language] = []
+    @State private var currentLanguage = ""
+    @State private var correctedLanguage = ""
+    @State private var showingCorrectedLanguagePicker = false
+    @State private var showingConfirmation = false
+
+    private var affectedCount: Int {
+        wordRepository.displayModels.filter { $0.language == currentLanguage }.count
+    }
+
+    private func languageName(for code: String) -> String {
+        languages.first(where: { $0.code == code })?.name
+            ?? Locale(identifier: "en").localizedString(forLanguageCode: code)
+            ?? code
+    }
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Theme.Colors.background.ignoresSafeArea()
+
+                VStack(alignment: .leading, spacing: 24) {
+                    Theme.Typography.body(
+                        "Older LingoLog versions could label terms with the translation language. Choose a bucket and the language its terms are actually written in."
+                    )
+                    .foregroundStyle(Theme.Colors.textSecondary)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Currently labeled")
+                            .font(.caption)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+
+                        Picker("Currently labeled", selection: $currentLanguage) {
+                            ForEach(wordRepository.availableLanguages(), id: \.self) { code in
+                                Text("\(languageName(for: code)) (\(code))").tag(code)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(Theme.Colors.accent)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Terms are actually in")
+                            .font(.caption)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+
+                        Button {
+                            showingCorrectedLanguagePicker = true
+                        } label: {
+                            HStack {
+                                Text(correctedLanguage.isEmpty ? "Choose language" : languageName(for: correctedLanguage))
+                                Spacer()
+                                Image(systemName: "chevron.down")
+                            }
+                            .padding()
+                            .background(Theme.Colors.inputBackground)
+                            .cornerRadius(10)
+                        }
+                    }
+
+                    Text("\(affectedCount) terms will move to the \(languageName(for: correctedLanguage)) practice-language bucket.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+
+                    Button("Relabel \(affectedCount) Terms") {
+                        showingConfirmation = true
+                    }
+                    .primaryButtonStyle()
+                    .disabled(affectedCount == 0 || correctedLanguage.isEmpty || correctedLanguage == currentLanguage)
+
+                    Spacer()
+                }
+                .padding()
+            }
+            .navigationTitle("Correct Languages")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .sheet(isPresented: $showingCorrectedLanguagePicker) {
+                LanguagePickerView(
+                    selectedLanguage: $correctedLanguage,
+                    title: "Learning Language",
+                    languages: languages
+                )
+            }
+            .alert("Relabel \(affectedCount) Terms?", isPresented: $showingConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Relabel") {
+                    dataManager.relabelWords(from: currentLanguage, to: correctedLanguage)
+                    languageSpaceManager.ensureSpace(
+                        learningLanguageCode: correctedLanguage,
+                        preferredMeaningLanguageCode: languageSpaceManager.activeSpace?.meaningLanguageCode ?? "en"
+                    )
+                    wordRepository.refresh()
+                    currentLanguage = wordRepository.availableLanguages().first ?? ""
+                }
+            } message: {
+                Text("Use this only when every selected term is written in \(languageName(for: correctedLanguage)).")
+            }
+            .task {
+                languages = (try? await translationService.fetchLanguages()) ?? []
+                currentLanguage = wordRepository.availableLanguages().first ?? ""
+                correctedLanguage = languageSpaceManager.activeSpace?.learningLanguageCode ?? ""
+            }
+        }
+        .navigationViewStyle(.stack)
     }
 }
 
@@ -487,7 +654,8 @@ struct ExportDataView: View {
         SettingsView(
             wordRepository: WordRepository(dataManager: DataManager.shared),
             dataManager: DataManager.shared,
-            userManager: UserManager.shared
+            userManager: UserManager.shared,
+            languageSpaceManager: LanguageSpaceManager.shared
         )
     }
 }

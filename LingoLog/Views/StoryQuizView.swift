@@ -357,6 +357,7 @@ struct AnswerOptionButton: View {
 #Preview {
     StoryQuizView(viewModel: StoryViewModel(
         wordRepository: WordRepository(dataManager: DataManager.shared),
-        storyRepository: StoryRepository(dataManager: DataManager.shared)
+        storyRepository: StoryRepository(dataManager: DataManager.shared),
+        languageSpaceManager: LanguageSpaceManager.shared
     ))
 }

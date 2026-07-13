@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftUI
 
@@ -17,6 +18,7 @@ final class StoryViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var error: String?
     @Published var selectedLanguage: String = ""
+    @Published private(set) var supportedLanguages: [Language] = []
     
     // Quiz State
     @Published var currentQuestionIndex: Int = 0
@@ -33,19 +35,21 @@ final class StoryViewModel: ObservableObject {
     private let geminiService: GeminiService
     private let translationService: TranslationService
     private let storeManager: StoreManager
+    private let languageSpaceManager: LanguageSpaceManager
+    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Computed Properties
     
-    var availableLanguages: [String] {
-        wordRepository.availableLanguages()
-    }
-    
     var hasWords: Bool {
-        !wordRepository.words.isEmpty
+        !wordsForSelectedLanguage.isEmpty
     }
     
     var wordsForSelectedLanguage: [WordEntry] {
         wordRepository.words(for: selectedLanguage)
+    }
+
+    var activeLanguageName: String {
+        languageSpaceManager.activeSpace?.learningLanguageName ?? ""
     }
     
     var hasTodayStory: Bool {
@@ -55,10 +59,6 @@ final class StoryViewModel: ObservableObject {
     var todayStory: DailyStory? {
         guard !selectedLanguage.isEmpty else { return nil }
         return storyRepository.fetchTodayStory(language: selectedLanguage)
-    }
-
-    var storyLanguages: [String] {
-        storyRepository.availableLanguages()
     }
 
     var storyHistory: [DailyStory] {
@@ -87,18 +87,51 @@ final class StoryViewModel: ObservableObject {
         storyRepository: StoryRepository,
         geminiService: GeminiService = .shared,
         translationService: TranslationService = .shared,
-        storeManager: StoreManager = .shared
+        storeManager: StoreManager = .shared,
+        languageSpaceManager: LanguageSpaceManager
     ) {
         self.wordRepository = wordRepository
         self.storyRepository = storyRepository
         self.geminiService = geminiService
         self.translationService = translationService
         self.storeManager = storeManager
-        
-        // Set default language to first available
-        if let firstLanguage = wordRepository.availableLanguages().first {
-            selectedLanguage = firstLanguage
+        self.languageSpaceManager = languageSpaceManager
+        selectedLanguage = languageSpaceManager.activeSpace?.learningLanguageCode ?? ""
+
+        wordRepository.$displayModels
+            .dropFirst()
+            .sink { [weak self] _ in
+                guard let self else { return }
+                objectWillChange.send()
+            }
+            .store(in: &cancellables)
+
+        languageSpaceManager.$activeSpaceID
+            .dropFirst()
+            .sink { [weak self] _ in
+                guard let self else { return }
+                selectedLanguage = languageSpaceManager.activeSpace?.learningLanguageCode ?? ""
+                currentStory = nil
+                error = nil
+                objectWillChange.send()
+            }
+            .store(in: &cancellables)
+    }
+
+    func loadSupportedLanguages() async {
+        do {
+            supportedLanguages = try await translationService.fetchLanguages()
+        } catch {
+            AppLogger.translation.error("Failed to load story language names: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    func languageName(for code: String) -> String {
+        if let language = supportedLanguages.first(where: { $0.code == code })
+            ?? translationService.cachedLanguages.first(where: { $0.code == code }) {
+            return language.name
+        }
+        return Locale(identifier: "en").localizedString(forLanguageCode: code) ?? code
     }
     
     // MARK: - Navigation
@@ -151,7 +184,7 @@ final class StoryViewModel: ObservableObject {
         
         let words = wordsForSelectedLanguage
         guard words.count >= 3 else {
-            error = "You need at least 3 words in \(selectedLanguage) to generate a story."
+            error = "You need at least 3 \(activeLanguageName) words to generate a story."
             return
         }
         
@@ -164,7 +197,7 @@ final class StoryViewModel: ObservableObject {
             let selectedWords = Array(words.shuffled().prefix(wordCount))
             
             // Get language name for the prompt
-            let languageName = getLanguageName(for: selectedLanguage)
+            let languageName = languageName(for: selectedLanguage)
             
             // Generate story using Gemini
             let response = try await geminiService.generateStory(
@@ -193,21 +226,6 @@ final class StoryViewModel: ObservableObject {
             self.error = error.localizedDescription
             AppLogger.story.error("Failed to generate story: \(error.localizedDescription, privacy: .public)")
         }
-    }
-    
-    private func getLanguageName(for code: String) -> String {
-        // Try to get from cached languages
-        if let language = translationService.cachedLanguages.first(where: { $0.code == code }) {
-            return language.name
-        }
-        
-        // Fallback: Use Locale to get language name
-        let locale = Locale(identifier: "en")
-        if let name = locale.localizedString(forLanguageCode: code) {
-            return name
-        }
-        
-        return code
     }
     
     // MARK: - Story Selection

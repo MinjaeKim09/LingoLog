@@ -52,6 +52,9 @@ struct LingoLogApp: App {
                     .onAppear {
                         updateNotificationsAndBadge()
                     }
+                    .onChange(of: environment.languageSpaceManager.activeSpaceID) { _, _ in
+                        updateNotificationsAndBadge()
+                    }
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -64,7 +67,9 @@ struct LingoLogApp: App {
     private func updateNotificationsAndBadge() {
         environment.wordRepository.refresh()
         NotificationManager.shared.updateNotificationsAndBadge(
-            dueCount: environment.wordRepository.dueWords().count,
+            dueCount: environment.wordRepository.dueWords(
+                for: environment.languageSpaceManager.activeSpace?.learningLanguageCode
+            ).count,
             hour: environment.dataManager.notificationHour,
             minute: environment.dataManager.notificationMinute,
             notificationsEnabled: notificationsEnabled

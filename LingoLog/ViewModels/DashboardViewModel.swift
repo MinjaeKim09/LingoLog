@@ -11,16 +11,19 @@ final class DashboardViewModel: ObservableObject {
     
     private let wordRepository: WordRepository
     private let dataManager: DataManager
+    private let languageSpaceManager: LanguageSpaceManager
     private let studyHistoryManager: StudyHistoryManager
     private var cancellables = Set<AnyCancellable>()
     
     init(
         wordRepository: WordRepository,
         dataManager: DataManager,
+        languageSpaceManager: LanguageSpaceManager,
         studyHistoryManager: StudyHistoryManager = .shared
     ) {
         self.wordRepository = wordRepository
         self.dataManager = dataManager
+        self.languageSpaceManager = languageSpaceManager
         self.studyHistoryManager = studyHistoryManager
         
         bind()
@@ -28,15 +31,22 @@ final class DashboardViewModel: ObservableObject {
     }
     
     func refresh() {
-        updateCounts(words: wordRepository.words)
+        updateCounts(words: wordsForActiveSpace)
         learningStreak = studyHistoryManager.getCurrentStreak()
         updateNotificationTime()
     }
     
     private func bind() {
         wordRepository.$words
-            .sink { [weak self] words in
-                self?.updateCounts(words: words)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.updateCounts(words: self.wordsForActiveSpace)
+            }
+            .store(in: &cancellables)
+
+        languageSpaceManager.$activeSpaceID
+            .sink { [weak self] _ in
+                self?.refresh()
             }
             .store(in: &cancellables)
         
@@ -51,7 +61,13 @@ final class DashboardViewModel: ObservableObject {
     private func updateCounts(words: [WordEntry]) {
         totalWords = words.count
         masteredWords = words.filter { $0.isMastered }.count
-        wordsDueForReview = wordRepository.dueWords().count
+        wordsDueForReview = wordRepository.dueWords(
+            for: languageSpaceManager.activeSpace?.learningLanguageCode
+        ).count
+    }
+
+    private var wordsForActiveSpace: [WordEntry] {
+        wordRepository.words(for: languageSpaceManager.activeSpace?.learningLanguageCode)
     }
     
     private func updateNotificationTime() {

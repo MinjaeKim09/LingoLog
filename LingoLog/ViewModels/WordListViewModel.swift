@@ -5,19 +5,19 @@ import SwiftUI
 
 @MainActor
 final class WordListViewModel: ObservableObject {
-    @Published var selectedLanguage: String = "All"
     @Published var searchText: String = ""
-    @Published private(set) var availableLanguages: [String] = ["All"]
     @Published private(set) var filteredWords: [WordDisplayModel] = []
     
     /// Flag to suppress refresh during explicit delete operations
     private(set) var isDeleting = false
     
     private let wordRepository: WordRepository
+    private let languageSpaceManager: LanguageSpaceManager
     private var cancellables = Set<AnyCancellable>()
     
-    init(wordRepository: WordRepository) {
+    init(wordRepository: WordRepository, languageSpaceManager: LanguageSpaceManager) {
         self.wordRepository = wordRepository
+        self.languageSpaceManager = languageSpaceManager
         bind()
         refresh()
     }
@@ -40,7 +40,6 @@ final class WordListViewModel: ObservableObject {
     
     func refresh() {
         guard !isDeleting else { return }
-        availableLanguages = ["All"] + wordRepository.availableLanguages()
         updateFilteredWords()
     }
     
@@ -50,16 +49,24 @@ final class WordListViewModel: ObservableObject {
                 self?.refresh()
             }
             .store(in: &cancellables)
+
+        languageSpaceManager.$activeSpaceID
+            .sink { [weak self] _ in
+                self?.refresh()
+            }
+            .store(in: &cancellables)
         
-        Publishers.CombineLatest($selectedLanguage, $searchText)
-            .sink { [weak self] _, _ in
+        $searchText
+            .sink { [weak self] _ in
                 self?.updateFilteredWords()
             }
             .store(in: &cancellables)
     }
     
     func updateFilteredWords() {
-        let words = wordRepository.displayModels(for: selectedLanguage == "All" ? nil : selectedLanguage)
+        let words = wordRepository.displayModels(
+            for: languageSpaceManager.activeSpace?.learningLanguageCode
+        )
         guard !searchText.isEmpty else {
             filteredWords = words
             return

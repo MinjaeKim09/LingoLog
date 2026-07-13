@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { validateStoryRequest, validateStoryResponse } = require("../story");
+const { buildPrompt, validateStoryRequest, validateStoryResponse } = require("../story");
 
 const validRequest = {
   subscriptionJWS: "signed-transaction",
@@ -36,4 +36,10 @@ test("accepts only complete, safe story responses", () => {
   assert.equal(validateStoryResponse(response).questions.length, 4);
   assert.throws(() => validateStoryResponse({ ...response, questions: response.questions.slice(0, 3) }));
   assert.throws(() => validateStoryResponse({ ...response, questions: [{ question: "Bad", options: [], correctIndex: 0 }] }));
+});
+
+test("describes vocabulary as terms in the requested story language", () => {
+  const prompt = buildPrompt(validRequest);
+  assert.match(prompt, /term in Korean/);
+  assert.match(prompt, /안녕 \(hello\)/);
 });

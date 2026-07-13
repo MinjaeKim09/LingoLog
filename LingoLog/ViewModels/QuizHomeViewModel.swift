@@ -8,19 +8,25 @@ final class QuizHomeViewModel: ObservableObject {
     @Published private(set) var timeRemaining: String = ""
     
     private let wordRepository: WordRepository
+    private let languageSpaceManager: LanguageSpaceManager
     private var cancellables = Set<AnyCancellable>()
     
-    init(wordRepository: WordRepository) {
+    init(wordRepository: WordRepository, languageSpaceManager: LanguageSpaceManager) {
         self.wordRepository = wordRepository
+        self.languageSpaceManager = languageSpaceManager
         bind()
         refresh()
     }
     
     func refresh() {
-        let dueWords = wordRepository.dueWords()
+        let dueWords = wordRepository.dueWords(
+            for: languageSpaceManager.activeSpace?.learningLanguageCode
+        )
         wordsDue = dueWords
         
-        let unmastered = wordRepository.words.filter { !$0.isMastered && $0.nextReviewDate != nil }
+        let unmastered = wordRepository.words(
+            for: languageSpaceManager.activeSpace?.learningLanguageCode
+        ).filter { !$0.isMastered && $0.nextReviewDate != nil }
         nextReviewDate = unmastered.compactMap { $0.nextReviewDate }.min()
         updateTimer()
     }
@@ -46,6 +52,12 @@ final class QuizHomeViewModel: ObservableObject {
     
     private func bind() {
         wordRepository.$words
+            .sink { [weak self] _ in
+                self?.refresh()
+            }
+            .store(in: &cancellables)
+
+        languageSpaceManager.$activeSpaceID
             .sink { [weak self] _ in
                 self?.refresh()
             }

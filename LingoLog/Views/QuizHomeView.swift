@@ -17,7 +17,7 @@ struct QuizHomeView: View {
                 VStack(spacing: 8) {
                     Theme.Typography.display("Quiz Time")
                         .foregroundStyle(Theme.Colors.textPrimary)
-                    Theme.Typography.body("Keep your streak alive!")
+                    Theme.Typography.body("Review your active language space")
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
                 .padding(.top, 40)

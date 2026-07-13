@@ -78,6 +78,29 @@ final class DataManager: ObservableObject {
         save()
     }
 
+    /// Relabels a user-selected vocabulary bucket. This is intentionally explicit because
+    /// records created by older app versions stored the translation destination in `language`,
+    /// and the correct learning language cannot be inferred reliably from short terms.
+    @discardableResult
+    func relabelWords(from currentLanguage: String, to learningLanguage: String) -> Int {
+        guard !currentLanguage.isEmpty,
+              !learningLanguage.isEmpty,
+              currentLanguage != learningLanguage else { return 0 }
+
+        let request: NSFetchRequest<WordEntry> = WordEntry.fetchRequest()
+        request.predicate = NSPredicate(format: "language == %@", currentLanguage)
+
+        do {
+            let words = try viewContext.fetch(request)
+            words.forEach { $0.language = learningLanguage }
+            save()
+            return words.count
+        } catch {
+            AppLogger.data.error("Unable to relabel vocabulary: \(error.localizedDescription, privacy: .public)")
+            return 0
+        }
+    }
+
     /// Deletes every locally stored word and generated story. This is intentionally explicit so
     /// the Settings action can truthfully promise to reset all learning data.
     func deleteAllLearningData() {

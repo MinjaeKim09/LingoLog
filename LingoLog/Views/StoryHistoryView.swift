@@ -14,9 +14,6 @@ struct StoryHistoryView: View {
                     } else if viewModel.storyHistory.isEmpty {
                         emptyStateView
                     } else {
-                        // Language Filter
-                        languageFilterSection
-                        
                         // Stories List
                         storiesListSection
                     }
@@ -125,33 +122,6 @@ struct StoryHistoryView: View {
         .padding(.top, 40)
     }
     
-    // MARK: - Language Filter Section
-    
-    private var languageFilterSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    FilterChip(
-                        title: "All",
-                        isSelected: viewModel.selectedLanguage.isEmpty
-                    ) {
-                        viewModel.selectedLanguage = ""
-                    }
-                    
-                    ForEach(viewModel.storyLanguages, id: \.self) { language in
-                        FilterChip(
-                            title: language,
-                            isSelected: viewModel.selectedLanguage == language
-                        ) {
-                            viewModel.selectedLanguage = language
-                        }
-                    }
-                }
-                .padding(.horizontal, 4)
-            }
-        }
-    }
-    
     // MARK: - Stories List Section
     
     private var storiesListSection: some View {
@@ -166,32 +136,6 @@ struct StoryHistoryView: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - Filter Chip
-
-struct FilterChip: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundStyle(isSelected ? .white : Theme.Colors.textPrimary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(isSelected ? Theme.Colors.accent : Theme.Colors.cardBackground)
-                .cornerRadius(20)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(isSelected ? Theme.Colors.accent : Theme.Colors.divider, lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -282,6 +226,7 @@ struct StoryHistoryCard: View {
 #Preview {
     StoryHistoryView(viewModel: StoryViewModel(
         wordRepository: WordRepository(dataManager: DataManager.shared),
-        storyRepository: StoryRepository(dataManager: DataManager.shared)
+        storyRepository: StoryRepository(dataManager: DataManager.shared),
+        languageSpaceManager: LanguageSpaceManager.shared
     ))
 }

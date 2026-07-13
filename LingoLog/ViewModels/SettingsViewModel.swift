@@ -15,22 +15,31 @@ final class SettingsViewModel: ObservableObject {
     @Published private(set) var languageStats: [LanguageStat] = []
     
     private let wordRepository: WordRepository
+    private let languageSpaceManager: LanguageSpaceManager
     private var cancellables = Set<AnyCancellable>()
     
-    init(wordRepository: WordRepository) {
+    init(wordRepository: WordRepository, languageSpaceManager: LanguageSpaceManager) {
         self.wordRepository = wordRepository
+        self.languageSpaceManager = languageSpaceManager
         bind()
         refresh()
     }
     
     func refresh() {
-        updateStats(words: wordRepository.words)
+        updateStats(words: wordsForActiveSpace)
     }
     
     private func bind() {
         wordRepository.$words
-            .sink { [weak self] words in
-                self?.updateStats(words: words)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.updateStats(words: self.wordsForActiveSpace)
+            }
+            .store(in: &cancellables)
+
+        languageSpaceManager.$activeSpaceID
+            .sink { [weak self] _ in
+                self?.refresh()
             }
             .store(in: &cancellables)
     }
@@ -38,11 +47,17 @@ final class SettingsViewModel: ObservableObject {
     private func updateStats(words: [WordEntry]) {
         totalWords = words.count
         masteredWords = words.filter { $0.isMastered }.count
-        wordsDueForReview = wordRepository.dueWords().count
+        wordsDueForReview = wordRepository.dueWords(
+            for: languageSpaceManager.activeSpace?.learningLanguageCode
+        ).count
         
         let grouped = Dictionary(grouping: words, by: { $0.language ?? "Unknown" })
         languageStats = grouped
             .map { LanguageStat(language: $0.key, count: $0.value.count) }
             .sorted { $0.language < $1.language }
+    }
+
+    private var wordsForActiveSpace: [WordEntry] {
+        wordRepository.words(for: languageSpaceManager.activeSpace?.learningLanguageCode)
     }
 }

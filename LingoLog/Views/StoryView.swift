@@ -5,19 +5,28 @@ struct StoryView: View {
     let storyRepository: StoryRepository
     let storyService: GeminiService
     let storeManager: StoreManager
+    @ObservedObject var languageSpaceManager: LanguageSpaceManager
     
     @StateObject private var viewModel: StoryViewModel
     
-    init(wordRepository: WordRepository, storyRepository: StoryRepository, storyService: GeminiService = .shared, storeManager: StoreManager = .shared) {
+    init(
+        wordRepository: WordRepository,
+        storyRepository: StoryRepository,
+        storyService: GeminiService = .shared,
+        storeManager: StoreManager = .shared,
+        languageSpaceManager: LanguageSpaceManager
+    ) {
         self.wordRepository = wordRepository
         self.storyRepository = storyRepository
         self.storyService = storyService
         self.storeManager = storeManager
+        self.languageSpaceManager = languageSpaceManager
         _viewModel = StateObject(wrappedValue: StoryViewModel(
             wordRepository: wordRepository,
             storyRepository: storyRepository,
             geminiService: storyService,
-            storeManager: storeManager
+            storeManager: storeManager,
+            languageSpaceManager: languageSpaceManager
         ))
     }
     
@@ -60,6 +69,7 @@ struct StoryView: View {
 #Preview {
     StoryView(
         wordRepository: WordRepository(dataManager: DataManager.shared),
-        storyRepository: StoryRepository(dataManager: DataManager.shared)
+        storyRepository: StoryRepository(dataManager: DataManager.shared),
+        languageSpaceManager: LanguageSpaceManager.shared
     )
 }

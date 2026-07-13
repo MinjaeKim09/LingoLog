@@ -46,11 +46,11 @@ struct PaywallView: View {
                     
                     // Title
                     VStack(spacing: 8) {
-                        Theme.Typography.display("Daily Stories")
+                        Theme.Typography.display("Daily Stories + Spaces")
                             .foregroundStyle(Theme.Colors.textPrimary)
                             .multilineTextAlignment(.center)
                         
-                        Theme.Typography.body("Subscribe for AI-generated stories from your vocabulary")
+                        Theme.Typography.body("Unlock AI-generated stories and separate spaces for every language you learn")
                             .foregroundStyle(Theme.Colors.textSecondary)
                             .multilineTextAlignment(.center)
                     }
@@ -73,9 +73,9 @@ struct PaywallView: View {
                             subtitle: "Generate one new story each day"
                         )
                         FeatureRow(
-                            icon: "lock.shield",
-                            title: "Private App Data",
-                            subtitle: "Your vocabulary stays saved on this device"
+                            icon: "rectangle.stack.badge.plus",
+                            title: "Language Spaces",
+                            subtitle: "Keep every language’s words, reviews, and stories separate"
                         )
                     }
                     .padding(20)

@@ -18,15 +18,18 @@ final class QuizSessionViewModel: ObservableObject {
     @Published var wordToEdit: WordEntry?
     
     private let wordRepository: WordRepository
+    private let languageSpaceManager: LanguageSpaceManager
     let dataManager: DataManager
     private let studyHistoryManager: StudyHistoryManager
     
     init(
         wordRepository: WordRepository,
         dataManager: DataManager,
+        languageSpaceManager: LanguageSpaceManager,
         studyHistoryManager: StudyHistoryManager = .shared
     ) {
         self.wordRepository = wordRepository
+        self.languageSpaceManager = languageSpaceManager
         self.dataManager = dataManager
         self.studyHistoryManager = studyHistoryManager
     }
@@ -37,7 +40,9 @@ final class QuizSessionViewModel: ObservableObject {
     }
     
     func loadWordsForQuiz() {
-        wordsDueForReview = wordRepository.dueWords()
+        wordsDueForReview = wordRepository.dueWords(
+            for: languageSpaceManager.activeSpace?.learningLanguageCode
+        )
         totalQuestions = wordsDueForReview.count
         currentWordIndex = 0
         correctAnswers = 0
@@ -95,7 +100,9 @@ final class QuizSessionViewModel: ObservableObject {
     }
     
     func retakeQuiz() {
-        let newWords = wordRepository.dueWords()
+        let newWords = wordRepository.dueWords(
+            for: languageSpaceManager.activeSpace?.learningLanguageCode
+        )
         if newWords.isEmpty {
             noWordsToRetake = true
             quizCompleted = true

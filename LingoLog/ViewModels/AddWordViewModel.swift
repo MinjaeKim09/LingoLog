@@ -5,61 +5,95 @@ import SwiftUI
 @MainActor
 final class AddWordViewModel: ObservableObject {
     @Published var inputText: String = ""
-    @Published var sourceLanguage: String
-    @Published var targetLanguage: String
+    @Published private(set) var space: LanguageSpace?
+    @Published private(set) var inputSide: VocabularyInputSide = .learningLanguage
     @Published var translation: String?
     @Published var context: String = ""
     @Published var isTranslating: Bool = false
     @Published var errorMessage: String?
-    @Published var allLanguages: [Language] = []
     
     private let dataManager: DataManager
     private let translationService: TranslationService
+    private let languageSpaceManager: LanguageSpaceManager
     private var cancellables = Set<AnyCancellable>()
     private var translationTask: Task<Void, Never>?
     
-    private let sourceLanguageKey = "lastUsedSourceLanguage"
-    private let targetLanguageKey = "lastUsedTargetLanguage"
-    
-    init(dataManager: DataManager, translationService: TranslationService) {
+    init(
+        dataManager: DataManager,
+        translationService: TranslationService,
+        languageSpaceManager: LanguageSpaceManager
+    ) {
         self.dataManager = dataManager
         self.translationService = translationService
-        self.sourceLanguage = UserDefaults.standard.string(forKey: sourceLanguageKey) ?? "en"
-        self.targetLanguage = UserDefaults.standard.string(forKey: targetLanguageKey) ?? "en"
+        self.languageSpaceManager = languageSpaceManager
+        self.space = languageSpaceManager.activeSpace
         
         bind()
     }
     
-    func loadLanguages() async {
-        do {
-            allLanguages = try await translationService.fetchLanguages()
-        } catch {
-            AppLogger.translation.error("Failed to load languages: \(error.localizedDescription, privacy: .public)")
-        }
+    var sourceLanguage: String {
+        inputSide == .learningLanguage ? learningLanguage : meaningLanguage
     }
-    
-    func swapLanguages() {
-        let temp = sourceLanguage
-        sourceLanguage = targetLanguage
-        targetLanguage = temp
-        
-        if !inputText.isEmpty {
-            translate(text: inputText)
-        }
+
+    var targetLanguage: String {
+        inputSide == .learningLanguage ? meaningLanguage : learningLanguage
     }
-    
-    func saveTranslation() {
-        guard let translated = translation, !translated.isEmpty else { return }
+
+    var languagePairIsValid: Bool {
+        !learningLanguage.isEmpty
+            && !meaningLanguage.isEmpty
+            && learningLanguage != meaningLanguage
+    }
+
+    var canSave: Bool {
+        normalizedVocabularyPair != nil && !isTranslating
+    }
+
+    var inputLanguageName: String {
+        languageName(for: sourceLanguage)
+    }
+
+    var outputLanguageName: String {
+        languageName(for: targetLanguage)
+    }
+
+    var switchInputLanguageLabel: String {
+        "I entered \(outputLanguageName) instead"
+    }
+
+    func switchInputLanguage() {
+        translationTask?.cancel()
+        let previousInput = inputText
+        let previousTranslation = translation
+        inputSide = inputSide == .learningLanguage ? .meaningLanguage : .learningLanguage
+
+        if let previousTranslation, !previousTranslation.isEmpty {
+            inputText = previousTranslation
+            translation = previousInput
+        }
+        translate(text: inputText)
+        errorMessage = nil
+    }
+
+    @discardableResult
+    func saveTranslation() -> Bool {
+        guard let pair = normalizedVocabularyPair else { return false }
         dataManager.addWord(
-            word: inputText,
-            translation: translated,
-            language: targetLanguage,
+            word: pair.term,
+            translation: pair.meaning,
+            language: pair.learningLanguageCode,
             context: context.isEmpty ? nil : context
         )
+        return true
     }
     
+    var learningLanguage: String { space?.learningLanguageCode ?? "" }
+
+    var meaningLanguage: String { space?.meaningLanguageCode ?? "" }
+
     func languageName(for code: String) -> String {
-        allLanguages.first(where: { $0.code == code })?.name ?? code
+        guard !code.isEmpty else { return "Language" }
+        return Locale(identifier: "en").localizedString(forLanguageCode: code) ?? code
     }
     
     private func bind() {
@@ -70,22 +104,13 @@ final class AddWordViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
-        $sourceLanguage
+        languageSpaceManager.$activeSpaceID
             .dropFirst()
-            .sink { [weak self] newValue in
+            .sink { [weak self] _ in
                 guard let self else { return }
-                UserDefaults.standard.set(newValue, forKey: sourceLanguageKey)
-                if !inputText.isEmpty {
-                    translate(text: inputText)
-                }
-            }
-            .store(in: &cancellables)
-        
-        $targetLanguage
-            .dropFirst()
-            .sink { [weak self] newValue in
-                guard let self else { return }
-                UserDefaults.standard.set(newValue, forKey: targetLanguageKey)
+                space = languageSpaceManager.activeSpace
+                inputSide = .learningLanguage
+                translation = nil
                 if !inputText.isEmpty {
                     translate(text: inputText)
                 }
@@ -101,6 +126,13 @@ final class AddWordViewModel: ObservableObject {
                 translation = nil
                 isTranslating = false
             }
+            return
+        }
+
+        guard languagePairIsValid else {
+            translation = nil
+            isTranslating = false
+            errorMessage = "Choose two different languages."
             return
         }
         
@@ -130,5 +162,16 @@ final class AddWordViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    private var normalizedVocabularyPair: NormalizedVocabularyPair? {
+        guard let translation else { return nil }
+        return NormalizedVocabularyPair.make(
+            input: inputText,
+            translatedText: translation,
+            learningLanguageCode: learningLanguage,
+            meaningLanguageCode: meaningLanguage,
+            inputSide: inputSide
+        )
     }
 }
