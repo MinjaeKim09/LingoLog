@@ -19,9 +19,30 @@ final class StoreManager: ObservableObject {
     @Published private(set) var isPurchasing: Bool = false
     @Published private(set) var isLoadingProducts: Bool = false
     @Published private(set) var latestSubscriptionJWS: String?
+
+#if DEBUG
+    /// Debug builds can use this to exercise the protected Daily Stories flow before
+    /// the App Store Connect subscription has been created.
+    @Published private(set) var developerDailyStoriesOverride: Bool
+    private static let developerOverridePreferenceKey = "developerDailyStoriesOverride"
+    private static let developerSubscriptionProof = "lingolog-debug-subscription-proof"
+#endif
     
     var isStoryUnlocked: Bool {
+#if DEBUG
+        isDailyStoriesActive || developerDailyStoriesOverride
+#else
         isDailyStoriesActive
+#endif
+    }
+
+    var storySubscriptionJWS: String? {
+#if DEBUG
+        if developerDailyStoriesOverride {
+            return Self.developerSubscriptionProof
+        }
+#endif
+        return latestSubscriptionJWS
     }
     
     // MARK: - Private
@@ -32,6 +53,9 @@ final class StoreManager: ObservableObject {
     // MARK: - Init
     
     private init() {
+#if DEBUG
+        developerDailyStoriesOverride = UserDefaults.standard.bool(forKey: Self.developerOverridePreferenceKey)
+#endif
         transactionListener = listenForTransactions()
         
         Task {
@@ -39,6 +63,13 @@ final class StoreManager: ObservableObject {
             await fetchProducts()
         }
     }
+
+#if DEBUG
+    func setDeveloperDailyStoriesOverride(_ enabled: Bool) {
+        developerDailyStoriesOverride = enabled
+        UserDefaults.standard.set(enabled, forKey: Self.developerOverridePreferenceKey)
+    }
+#endif
     
     deinit {
         transactionListener?.cancel()

@@ -43,6 +43,10 @@ struct SettingsView: View {
                     
                     // Purchases Section
                     purchasesSection
+
+#if DEBUG
+                    developerSection
+#endif
                     
                     // Statistics Section
                     SettingsSection(title: "Statistics") {
@@ -277,6 +281,28 @@ struct SettingsView: View {
             }
         }
     }
+
+#if DEBUG
+    private var developerSection: some View {
+        SettingsSection(title: "Developer") {
+            Toggle(
+                isOn: Binding(
+                    get: { storeManager.developerDailyStoriesOverride },
+                    set: { storeManager.setDeveloperDailyStoriesOverride($0) }
+                )
+            ) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Theme.Typography.body("Unlock Daily Stories")
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text("Debug build only — bypasses StoreKit using the development backend.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+            }
+            .toggleStyle(SwitchToggleStyle(tint: Theme.Colors.accent))
+        }
+    }
+#endif
     
     // MARK: - Helpers
     

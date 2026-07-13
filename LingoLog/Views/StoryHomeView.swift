@@ -217,19 +217,19 @@ struct StoryHomeView: View {
                 }
                 
                 Button(action: {
-                    if storeManager.isDailyStoriesActive {
+                    if storeManager.isStoryUnlocked {
                         viewModel.selectStory(story)
                     } else {
                         showingPaywall = true
                     }
                 }) {
                     HStack {
-                        if !storeManager.isDailyStoriesActive {
+                        if !storeManager.isStoryUnlocked {
                             Image(systemName: "lock.fill")
                         } else {
                             Image(systemName: "book.fill")
                         }
-                        Text(storeManager.isDailyStoriesActive ? "Read Story" : "Subscribe")
+                        Text(storeManager.isStoryUnlocked ? "Read Story" : "Subscribe")
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -260,7 +260,7 @@ struct StoryHomeView: View {
             }
             
             Button(action: {
-                if storeManager.isDailyStoriesActive {
+                if storeManager.isStoryUnlocked {
                     Task {
                         await viewModel.loadOrGenerateStory()
                     }
@@ -269,7 +269,7 @@ struct StoryHomeView: View {
                 }
             }) {
                 HStack {
-                    if !storeManager.isDailyStoriesActive {
+                    if !storeManager.isStoryUnlocked {
                         Image(systemName: "lock.fill")
                         Text("Subscribe")
                     } else {
@@ -280,7 +280,7 @@ struct StoryHomeView: View {
                 .frame(maxWidth: .infinity)
             }
             .primaryButtonStyle()
-            .disabled(storeManager.isDailyStoriesActive && viewModel.wordsForSelectedLanguage.count < 3)
+            .disabled(storeManager.isStoryUnlocked && viewModel.wordsForSelectedLanguage.count < 3)
             .opacity(viewModel.wordsForSelectedLanguage.count < 3 ? 0.5 : 1.0)
             
             if viewModel.wordsForSelectedLanguage.count < 3 {
@@ -303,13 +303,13 @@ struct StoryHomeView: View {
                 Spacer()
                 
                 Button(action: {
-                    if storeManager.isDailyStoriesActive {
+                    if storeManager.isStoryUnlocked {
                         viewModel.navigateTo(.history)
                     } else {
                         showingPaywall = true
                     }
                 }) {
-                    Text(storeManager.isDailyStoriesActive ? "See All" : "Subscribe")
+                    Text(storeManager.isStoryUnlocked ? "See All" : "Subscribe")
                         .font(.caption)
                         .foregroundStyle(Theme.Colors.accent)
                 }
@@ -319,7 +319,7 @@ struct StoryHomeView: View {
             VStack(spacing: 12) {
                 ForEach(viewModel.storyHistory.prefix(3)) { story in
                     StoryHistoryRow(story: story) {
-                        if storeManager.isDailyStoriesActive {
+                        if storeManager.isStoryUnlocked {
                             viewModel.selectStory(story)
                         } else {
                             showingPaywall = true

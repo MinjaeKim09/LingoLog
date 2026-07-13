@@ -166,8 +166,8 @@ struct PaywallView: View {
                 .padding(.horizontal, 24)
             }
         }
-        .onChange(of: storeManager.isDailyStoriesActive) { _, active in
-            if active {
+        .onChange(of: storeManager.isStoryUnlocked) { _, unlocked in
+            if unlocked {
                 dismiss()
             }
         }

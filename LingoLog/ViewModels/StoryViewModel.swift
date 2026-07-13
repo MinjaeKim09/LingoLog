@@ -171,7 +171,7 @@ final class StoryViewModel: ObservableObject {
                 words: selectedWords,
                 language: selectedLanguage,
                 languageName: languageName,
-                subscriptionJWS: storeManager.latestSubscriptionJWS
+                subscriptionJWS: storeManager.storySubscriptionJWS
             )
             
             // Save the story

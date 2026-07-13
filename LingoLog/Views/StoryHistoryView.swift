@@ -9,7 +9,7 @@ struct StoryHistoryView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 16) {
-                    if !storeManager.isDailyStoriesActive {
+                    if !storeManager.isStoryUnlocked {
                         lockedStateView
                     } else if viewModel.storyHistory.isEmpty {
                         emptyStateView
@@ -158,7 +158,7 @@ struct StoryHistoryView: View {
         LazyVStack(spacing: 12) {
             ForEach(viewModel.storyHistory) { story in
                 StoryHistoryCard(story: story) {
-                    if storeManager.isDailyStoriesActive {
+                    if storeManager.isStoryUnlocked {
                         viewModel.selectStory(story)
                     } else {
                         showingPaywall = true
