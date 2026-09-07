@@ -31,14 +31,13 @@ struct QuizView: View {
     
     var body: some View {
         ZStack {
-            Theme.Colors.background
-                .ignoresSafeArea()
+            AmbientBackground()
             
             if showingSession {
                 QuizSessionView(
                     viewModel: sessionViewModel,
                     onDismiss: {
-                        withAnimation {
+                        withAnimation(Theme.Motion.standard) {
                             showingSession = false
                         }
                     }
@@ -48,7 +47,7 @@ struct QuizView: View {
                 QuizHomeView(
                     viewModel: homeViewModel,
                     onStartQuiz: {
-                        withAnimation {
+                        withAnimation(Theme.Motion.standard) {
                             sessionViewModel.loadWordsForQuiz()
                             showingSession = true
                         }

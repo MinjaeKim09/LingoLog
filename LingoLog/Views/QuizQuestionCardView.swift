@@ -11,6 +11,8 @@ struct QuizQuestionCardView: View {
     let onAnswerSubmitted: () -> Void
     let onNext: () -> Void
     let onEdit: () -> Void
+    @State private var dragOffset: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     private var isCorrectionMatch: Bool {
         guard let translation = word.translation else { return false }
@@ -22,7 +24,7 @@ struct QuizQuestionCardView: View {
             VStack(spacing: 0) {
                 VStack(spacing: 8) {
                     ProgressView(value: Double(questionIndex), total: Double(max(totalQuestions, 1)))
-                        .accentColor(Theme.Colors.accent)
+                        .tint(Theme.Colors.violet)
                         .padding(.top, 32)
                     HStack {
                         Theme.Typography.body("Question \(questionIndex) of \(totalQuestions)")
@@ -65,8 +67,8 @@ struct QuizQuestionCardView: View {
                             .font(.caption)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 4)
-                            .background(Theme.Colors.secondaryAccent.opacity(0.1))
-                            .foregroundColor(Theme.Colors.secondaryAccent)
+                            .background(Theme.Colors.skySurface)
+                            .foregroundColor(Theme.Colors.sky)
                             .cornerRadius(12)
                     }
                     .padding(.top, 0)
@@ -79,14 +81,14 @@ struct QuizQuestionCardView: View {
                             .padding(16)
                             .background(Theme.Colors.inputBackground)
                             .cornerRadius(16)
-                            .font(.system(.title3, design: .rounded))
+                            .font(.title3)
                             .foregroundColor(Theme.Colors.textPrimary)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16)
                                     .stroke(
                                         showingAnswer && !isCorrect
                                             ? (isCorrectionMatch ? Theme.Colors.success : Theme.Colors.error.opacity(0.5))
-                                            : Theme.Colors.accent.opacity(0.3),
+                                            : Theme.Colors.violet.opacity(0.45),
                                         lineWidth: showingAnswer && !isCorrect ? 2 : 1
                                     )
                             )
@@ -112,12 +114,12 @@ struct QuizQuestionCardView: View {
                                     
                                     if isCorrect {
                                         Text("Correct!")
-                                            .font(.system(.body, design: .rounded))
+                                            .font(.body)
                                             .foregroundColor(Theme.Colors.success)
                                             .fontWeight(.semibold)
                                     } else {
                                         Text("Type the correct answer:")
-                                            .font(.system(.body, design: .rounded))
+                                            .font(.body)
                                             .foregroundColor(Theme.Colors.error)
                                             .fontWeight(.semibold)
                                     }
@@ -146,20 +148,21 @@ struct QuizQuestionCardView: View {
                                     .disabled(!isCorrectionMatch)
                                     .opacity(isCorrectionMatch ? 1.0 : 0.5)
                                     .animation(.easeInOut, value: isCorrectionMatch)
+
+                                    if isCorrectionMatch {
+                                        Label("Swipe left or tap Continue", systemImage: "hand.draw")
+                                            .font(.caption)
+                                            .foregroundStyle(Theme.Colors.textSecondary)
+                                            .transition(.opacity)
+                                    }
                                     
                                     Button(action: onEdit) {
                                         HStack {
                                             Image(systemName: "pencil")
                                             Text("Edit Word")
                                         }
-                                        .frame(maxWidth: .infinity)
                                     }
-                                    .padding()
-                                    .foregroundColor(Theme.Colors.secondaryAccent)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Theme.Colors.secondaryAccent.opacity(0.3), lineWidth: 1)
-                                    )
+                                    .secondaryButtonStyle()
                                 }
                             }
                         } else {
@@ -179,6 +182,31 @@ struct QuizQuestionCardView: View {
                 .padding(24)
                 .glassCard()
                 .padding(.horizontal, 24)
+                .offset(x: dragOffset)
+                .rotationEffect(.degrees(reduceMotion ? 0 : Double(dragOffset / 28)))
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 18)
+                        .onChanged { value in
+                            guard showingAnswer, !isCorrect, isCorrectionMatch,
+                                  abs(value.translation.width) > abs(value.translation.height) else { return }
+                            dragOffset = min(0, value.translation.width)
+                        }
+                        .onEnded { value in
+                            guard showingAnswer, !isCorrect, isCorrectionMatch else { return }
+                            if value.predictedEndTranslation.width < -110 {
+                                withAnimation(reduceMotion ? nil : .easeIn(duration: 0.18)) {
+                                    dragOffset = -UIScreen.main.bounds.width
+                                }
+                                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.16)) {
+                                    onNext()
+                                }
+                            } else {
+                                withAnimation(reduceMotion ? nil : Theme.Motion.standard) { dragOffset = 0 }
+                            }
+                        }
+                )
+                .onChange(of: questionIndex) { _, _ in dragOffset = 0 }
                 
                 Spacer(minLength: 300)
             }

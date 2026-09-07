@@ -21,9 +21,12 @@ final class DataManager: ObservableObject {
         container.viewContext
     }
     
-    private init() {
+    init(inMemory: Bool = false) {
         container = NSPersistentContainer(name: "LingoLog")
         let description = container.persistentStoreDescriptions.first
+        if inMemory {
+            description?.type = NSInMemoryStoreType
+        }
         description?.shouldMigrateStoreAutomatically = true
         description?.shouldInferMappingModelAutomatically = true
         

@@ -3,126 +3,124 @@ import SwiftUI
 struct QuizHomeView: View {
     @ObservedObject var viewModel: QuizHomeViewModel
     let onStartQuiz: () -> Void
-    
     @State private var timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-    
-    private var isReady: Bool {
-        !viewModel.wordsDue.isEmpty
-    }
-    
+
+    private var isReady: Bool { !viewModel.wordsDue.isEmpty }
+
     var body: some View {
         ScrollView {
-            VStack(spacing: 32) {
-                // Header
-                VStack(spacing: 8) {
-                    Theme.Typography.display("Quiz Time")
-                        .foregroundStyle(Theme.Colors.textPrimary)
-                    Theme.Typography.body("Review your active language space")
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                }
-                .padding(.top, 40)
-                
-                // Status Section
-                VStack(spacing: 24) {
-                    if isReady {
-                        VStack(spacing: 16) {
-                            ZStack {
-                                Circle()
-                                    .fill(Theme.Colors.accent.opacity(0.1))
-                                    .frame(width: 120, height: 120)
-                                
-                                Image(systemName: "brain.head.profile")
-                                    .font(.system(size: 50))
-                                    .foregroundStyle(Theme.Colors.accent)
-                            }
-                            
-                            VStack(spacing: 4) {
-                                Text("\(viewModel.wordsDue.count)")
-                                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                                    .foregroundStyle(Theme.Colors.textPrimary)
-                                
-                                Text(viewModel.wordsDue.count == 1 ? "word ready" : "words ready")
-                                    .font(.headline)
-                                    .foregroundStyle(Theme.Colors.textSecondary)
-                            }
-                        }
-                    } else {
-                        VStack(spacing: 16) {
-                            ZStack {
-                                Circle()
-                                    .fill(Theme.Colors.secondaryAccent.opacity(0.1))
-                                    .frame(width: 120, height: 120)
-                                
-                                Image(systemName: "clock.fill")
-                                    .font(.system(size: 50))
-                                    .foregroundStyle(Theme.Colors.secondaryAccent)
-                            }
-                            
-                            VStack(spacing: 4) {
-                                if let _ = viewModel.nextReviewDate {
-                                    Text("Next Review In")
-                                        .font(.caption)
-                                        .textCase(.uppercase)
-                                        .foregroundStyle(Theme.Colors.textSecondary)
-                                    
-                                    Text(viewModel.timeRemaining)
-                                        .font(.system(size: 32, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Theme.Colors.textPrimary)
-                                        .onReceive(timer) { _ in
-                                            viewModel.updateTimer()
-                                        }
-                                        .onAppear {
-                                            viewModel.updateTimer()
-                                        }
-                                } else {
-                                    Text("All Caught Up!")
-                                        .font(.title2)
-                                        .fontWeight(.bold)
-                                        .foregroundStyle(Theme.Colors.success)
-                                    
-                                    Text("Add more words to continue learning")
-                                        .font(.body)
-                                        .foregroundStyle(Theme.Colors.textSecondary)
-                                        .multilineTextAlignment(.center)
-                                        .padding(.horizontal)
-                                }
-                            }
-                        }
-                    }
-                    
-                    Button(action: onStartQuiz) {
+            VStack(alignment: .leading, spacing: 28) {
+                PageHeader(
+                    "Practice",
+                    subtitle: "A few focused recalls make a word feel natural."
+                )
+
+                practiceStage
+
+                VStack(alignment: .leading, spacing: 13) {
+                    SectionHeading(title: "Your rhythm")
+                    VStack(spacing: 15) {
                         HStack {
-                            Image(systemName: "play.fill")
-                            Text("Take Quiz")
+                            Label("Last 14 days", systemImage: "flame.fill")
+                                .font(.system(.headline, design: .rounded).weight(.bold))
+                                .foregroundStyle(Theme.Colors.warning)
+                            Spacer()
+                            Text("Small steps count")
+                                .font(.caption)
+                                .foregroundStyle(Theme.Colors.textSecondary)
                         }
-                        .frame(maxWidth: .infinity)
+                        StreakCalendarView()
                     }
-                    .primaryButtonStyle()
-                    .disabled(!isReady)
-                    .opacity(isReady ? 1.0 : 0.5)
+                    .padding(18)
+                    .glassCard()
                 }
-                .padding(32)
-                .glassCard()
-                .padding(.horizontal)
-                
-                // Streak Calendar Section
-                VStack(spacing: 16) {
-                    HStack {
-                        Theme.Typography.title("Study Streak")
-                        Spacer()
-                        Image(systemName: "flame.fill")
-                            .foregroundStyle(Theme.Colors.warning)
+            }
+            .padding(.horizontal, Theme.Metrics.pagePadding)
+            .padding(.top, 12)
+            .padding(.bottom, 36)
+        }
+        .scrollIndicators(.hidden)
+        .onAppear { viewModel.refresh() }
+    }
+
+    private var practiceStage: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .top, spacing: 16) {
+                RecallDeckMark(isReady: isReady)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(isReady ? "Ready to recall" : "All clear")
+                        .font(.system(.caption, design: .rounded).weight(.bold))
+                        .foregroundStyle(.white.opacity(0.76))
+
+                    if isReady {
+                        Text("\(viewModel.wordsDue.count) \(viewModel.wordsDue.count == 1 ? "word is" : "words are") waiting.")
+                            .font(.system(.title2, design: .rounded).weight(.heavy))
+                    } else if viewModel.nextReviewDate != nil {
+                        Text(viewModel.timeRemaining)
+                            .font(.system(.title2, design: .rounded).weight(.heavy).monospacedDigit())
+                            .contentTransition(.numericText())
+                            .onReceive(timer) { _ in viewModel.updateTimer() }
+                        Text("until the next round")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.76))
+                    } else {
+                        Text("Nothing to review right now.")
+                            .font(.system(.title2, design: .rounded).weight(.heavy))
                     }
-                    
-                    StreakCalendarView()
                 }
-                .padding(24)
-                .glassCard()
-                .padding(.horizontal)
+            }
+
+            Text(isReady
+                 ? "Type the meaning, check your answer, then move the word forward."
+                 : "Newly saved words will show up here when they’re ready for another look.")
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.82))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: onStartQuiz) {
+                Label("Start recall", systemImage: "arrow.forward")
+            }
+            .lightButtonStyle()
+            .disabled(!isReady)
+
+            if isReady {
+                Label("Corrected a miss? Swipe left to keep moving.", systemImage: "hand.draw.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
         }
-        .onAppear {
-            viewModel.refresh()
+        .foregroundStyle(.white)
+        .padding(20)
+        .background(isReady ? Theme.Colors.violetField : Theme.Colors.accentField)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.cardRadius, style: .continuous))
+    }
+}
+
+private struct RecallDeckMark: View {
+    let isReady: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.white.opacity(0.16))
+                .frame(width: 54, height: 58)
+                .rotationEffect(.degrees(-8))
+                .offset(x: -7, y: 2)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.white.opacity(0.28))
+                .frame(width: 54, height: 58)
+                .rotationEffect(.degrees(6))
+                .offset(x: 7, y: 2)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.white)
+                .frame(width: 54, height: 58)
+            Image(systemName: isReady ? "arrow.triangle.2.circlepath" : "checkmark")
+                .font(.title3.weight(.heavy))
+                .foregroundStyle(isReady ? Theme.Colors.violetField : Theme.Colors.accentField)
         }
+        .frame(width: 70, height: 66)
+        .accessibilityHidden(true)
     }
 }

@@ -54,6 +54,7 @@ struct StoryResponse: Codable {
     let title: String
     let story: String
     let questions: [StoryQuizQuestion]
+    var words: [StoryGenerationWord]? = nil
 }
 
 private struct StoryGenerationRequest: Encodable {
@@ -63,7 +64,7 @@ private struct StoryGenerationRequest: Encodable {
     let words: [StoryGenerationWord]
 }
 
-private struct StoryGenerationWord: Encodable {
+struct StoryGenerationWord: Codable {
     let term: String
     let meaning: String
 

@@ -45,34 +45,30 @@ final class WordListViewModel: ObservableObject {
     
     private func bind() {
         wordRepository.$displayModels
-            .sink { [weak self] _ in
-                self?.refresh()
-            }
-            .store(in: &cancellables)
-
-        languageSpaceManager.$activeSpaceID
-            .sink { [weak self] _ in
-                self?.refresh()
-            }
-            .store(in: &cancellables)
-        
-        $searchText
-            .sink { [weak self] _ in
-                self?.updateFilteredWords()
+            .combineLatest(languageSpaceManager.$activeSpaceID, $searchText)
+            .sink { [weak self] words, spaceID, query in
+                guard let self, !isDeleting else { return }
+                updateFilteredWords(words: words, spaceID: spaceID, query: query)
             }
             .store(in: &cancellables)
     }
     
     func updateFilteredWords() {
-        let words = wordRepository.displayModels(
-            for: languageSpaceManager.activeSpace?.learningLanguageCode
+        updateFilteredWords(
+            words: wordRepository.displayModels,
+            spaceID: languageSpaceManager.activeSpaceID,
+            query: searchText
         )
-        guard !searchText.isEmpty else {
+    }
+
+    private func updateFilteredWords(words: [WordDisplayModel], spaceID: UUID?, query: String) {
+        let language = languageSpaceManager.spaces.first { $0.id == spaceID }?.learningLanguageCode
+        let words = words.filter { language == nil || $0.language == language }
+        guard !query.isEmpty else {
             filteredWords = words
             return
         }
         
-        let query = searchText
         filteredWords = words.filter { word in
             word.word.localizedCaseInsensitiveContains(query) ||
             word.translation.localizedCaseInsensitiveContains(query) ||
@@ -89,19 +85,17 @@ final class WordListViewModel: ObservableObject {
             optimisticDelete(objectIDs: objectIDsToDelete)
         }
         
-        // 2. Persist to Core Data
-        Task {
-            wordRepository.suppressRefresh(true)
-            for objectID in objectIDsToDelete {
-                if let wordEntry = wordRepository.wordEntry(for: objectID) {
-                    dataManager.deleteWord(wordEntry)
-                }
+        // Saves are synchronous on the main context. Refresh explicitly instead of
+        // waiting for a notification that may have been suppressed.
+        wordRepository.suppressRefresh(true)
+        for objectID in objectIDsToDelete {
+            if let wordEntry = wordRepository.wordEntry(for: objectID) {
+                dataManager.deleteWord(wordEntry)
             }
-            
-            // 3. Wait for Core Data to settle before allowing refresh
-            try? await Task.sleep(for: .milliseconds(300))
-            wordRepository.suppressRefresh(false)
-            commitDelete()
         }
+        wordRepository.suppressRefresh(false)
+        wordRepository.refresh()
+        commitDelete()
+        refresh()
     }
 }

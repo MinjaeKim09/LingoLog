@@ -4,7 +4,7 @@ struct StoryQuizView: View {
     @ObservedObject var viewModel: StoryViewModel
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Theme.Colors.background
                     .ignoresSafeArea()
@@ -36,7 +36,6 @@ struct StoryQuizView: View {
                 }
             }
         }
-        .navigationViewStyle(.stack)
     }
     
     // MARK: - Quiz Question View
@@ -91,12 +90,11 @@ struct StoryQuizView: View {
             // Question Text
             VStack(spacing: 8) {
                 Image(systemName: "questionmark.circle.fill")
-                    .font(.system(size: 40))
+                    .font(.largeTitle)
                     .foregroundStyle(Theme.Colors.accent)
                 
                 Text(question.question)
-                    .font(.system(.title3, design: .rounded))
-                    .fontWeight(.semibold)
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(Theme.Colors.textPrimary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -162,15 +160,10 @@ struct StoryQuizView: View {
     }
     
     private var resultIcon: some View {
-        ZStack {
-            Circle()
-                .fill(resultColor.opacity(0.1))
-                .frame(width: 120, height: 120)
-            
-            Image(systemName: resultIconName)
-                .font(.system(size: 50))
-                .foregroundStyle(resultColor)
-        }
+        Image(systemName: resultIconName)
+            .font(.largeTitle)
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(resultColor)
     }
     
     private var scoreDisplay: some View {
@@ -178,13 +171,12 @@ struct StoryQuizView: View {
             Theme.Typography.display("Quiz Complete!")
                 .foregroundStyle(Theme.Colors.textPrimary)
             
-            Text("\(viewModel.quizScore) out of \(viewModel.totalQuizQuestions)")
-                .font(.title2)
-                .foregroundStyle(Theme.Colors.textSecondary)
-            
-            Text("\(Int(scorePercentage))%")
-                .font(.system(size: 60, weight: .bold, design: .rounded))
-                .foregroundStyle(resultColor)
+            Label(
+                "\(viewModel.quizScore) of \(viewModel.totalQuizQuestions) correct",
+                systemImage: "checkmark.circle.fill"
+            )
+            .font(.headline)
+            .foregroundStyle(resultColor)
         }
     }
     

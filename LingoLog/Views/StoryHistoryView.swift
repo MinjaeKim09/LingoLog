@@ -6,9 +6,12 @@ struct StoryHistoryView: View {
     @State private var showingPaywall = false
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 16) {
+        NavigationStack {
+            ZStack {
+                AmbientBackground()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                    PageHeader("Story history", subtitle: "Return to past readings anytime.")
                     if !storeManager.isStoryUnlocked {
                         lockedStateView
                     } else if viewModel.storyHistory.isEmpty {
@@ -19,10 +22,11 @@ struct StoryHistoryView: View {
                     }
                     
                     Spacer(minLength: 50)
+                    }
+                    .padding(Theme.Metrics.pagePadding)
                 }
-                .padding()
+                .scrollIndicators(.hidden)
             }
-            .background(Theme.Colors.background)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -38,13 +42,8 @@ struct StoryHistoryView: View {
                     }
                 }
                 
-                ToolbarItem(placement: .principal) {
-                    Theme.Typography.title("Story History")
-                        .foregroundStyle(Theme.Colors.textPrimary)
-                }
             }
         }
-        .navigationViewStyle(.stack)
         .sheet(isPresented: $showingPaywall) {
             PaywallView(storeManager: storeManager)
         }
@@ -59,8 +58,8 @@ struct StoryHistoryView: View {
                     .fill(Theme.Colors.secondaryAccent.opacity(0.1))
                     .frame(width: 100, height: 100)
                 
-                Image(systemName: "book.closed")
-                    .font(.system(size: 40))
+                Image(systemName: "text.book.closed.fill")
+                    .font(.largeTitle)
                     .foregroundStyle(Theme.Colors.secondaryAccent)
             }
             
@@ -95,7 +94,7 @@ struct StoryHistoryView: View {
                     .frame(width: 100, height: 100)
                 
                 Image(systemName: "lock.fill")
-                    .font(.system(size: 40))
+                    .font(.largeTitle)
                     .foregroundStyle(Theme.Colors.accent)
             }
             
@@ -219,7 +218,7 @@ struct StoryHistoryCard: View {
             .padding(16)
             .glassCard()
         }
-        .buttonStyle(.plain)
+        .tactileButtonStyle()
     }
 }
 

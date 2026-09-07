@@ -1,95 +1,35 @@
 import SwiftUI
+import UIKit
 
 struct EditWordView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var word: WordEntry
     let dataManager: DataManager
-    
-    @State private var editedWord: String = ""
-    @State private var editedTranslation: String = ""
-    @State private var editedContext: String = ""
-    
+    @State private var editedWord = ""
+    @State private var editedTranslation = ""
+    @State private var editedContext = ""
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
-                Theme.Colors.background.ignoresSafeArea()
-                
+                AmbientBackground()
                 ScrollView {
-                    VStack(spacing: 24) {
-                        // Word Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            Theme.Typography.title("Word")
-                                .foregroundColor(Theme.Colors.textPrimary)
-                            
-                            TextField("Word", text: $editedWord)
-                                .padding()
-                                .background(Theme.Colors.inputBackground)
-                                .cornerRadius(12)
-                                .font(.system(.body, design: .rounded))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Theme.Colors.divider, lineWidth: 1)
-                                )
-                        }
-                        .padding()
-                        .glassCard()
-                        
-                        // Translation Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            Theme.Typography.title("Translation")
-                                .foregroundColor(Theme.Colors.textPrimary)
-                            
-                            TextField("Translation", text: $editedTranslation)
-                                .padding()
-                                .background(Theme.Colors.inputBackground)
-                                .cornerRadius(12)
-                                .font(.system(.body, design: .rounded))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Theme.Colors.divider, lineWidth: 1)
-                                )
-                        }
-                        .padding()
-                        .glassCard()
-                        
-                        // Context Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            Theme.Typography.title("Context")
-                                .foregroundColor(Theme.Colors.textPrimary)
-                            
-                            TextField("Context (Optional)", text: $editedContext)
-                                .padding()
-                                .background(Theme.Colors.inputBackground)
-                                .cornerRadius(12)
-                                .font(.system(.body, design: .rounded))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Theme.Colors.divider, lineWidth: 1)
-                                )
-                        }
-                        .padding()
-                        .glassCard()
+                    VStack(alignment: .leading, spacing: 20) {
+                        PageHeader("Edit word", subtitle: "Keep both sides clear and memorable.")
+                        EditField(title: "Word or phrase", icon: "character.cursor.ibeam", text: $editedWord)
+                        EditField(title: "Meaning", icon: "text.bubble", text: $editedTranslation)
+                        EditField(title: "Memory cue", icon: "quote.bubble", text: $editedContext, optional: true)
                     }
-                    .padding()
+                    .padding(Theme.Metrics.pagePadding)
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .navigationTitle("Edit Word")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(Theme.Colors.textSecondary)
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveChanges()
-                    }
-                    .fontWeight(.semibold)
-                    .foregroundColor(Theme.Colors.accent)
-                    .disabled(editedWord.isEmpty || editedTranslation.isEmpty)
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { saveChanges() }
+                        .fontWeight(.semibold)
+                        .disabled(editedWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || editedTranslation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .onAppear {
@@ -99,12 +39,37 @@ struct EditWordView: View {
             }
         }
     }
-    
+
     private func saveChanges() {
-        word.word = editedWord
-        word.translation = editedTranslation
-        word.context = editedContext.isEmpty ? nil : editedContext
+        word.word = editedWord.trimmingCharacters(in: .whitespacesAndNewlines)
+        word.translation = editedTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
+        let context = editedContext.trimmingCharacters(in: .whitespacesAndNewlines)
+        word.context = context.isEmpty ? nil : context
         dataManager.save()
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
         dismiss()
+    }
+}
+
+private struct EditField: View {
+    let title: String
+    let icon: String
+    @Binding var text: String
+    var optional = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label(title, systemImage: icon).font(.headline)
+                Spacer()
+                if optional { Text("Optional").font(.caption).foregroundStyle(Theme.Colors.textSecondary) }
+            }
+            TextField(title, text: $text, axis: .vertical)
+                .lineLimit(1...4)
+                .padding(15)
+                .background(Theme.Colors.inputBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .padding(18)
+        .glassCard()
     }
 }

@@ -32,8 +32,7 @@ struct StoryView: View {
     
     var body: some View {
         ZStack {
-            Theme.Colors.background
-                .ignoresSafeArea()
+            AmbientBackground()
             
             switch viewModel.viewState {
             case .home:
@@ -62,7 +61,7 @@ struct StoryView: View {
                     ))
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: viewModel.viewState)
+        .animation(Theme.Motion.standard, value: viewModel.viewState)
     }
 }
 

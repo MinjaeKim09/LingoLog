@@ -34,94 +34,49 @@ struct DashboardView: View {
     }
 
     private var greeting: String {
-        userManager.displayName.isEmpty ? "Your language,\nmade memorable." : "Hello, \(userManager.displayName)."
+        let hour = Calendar.current.component(.hour, from: Date())
+        let salutation = hour < 12 ? "Good morning" : (hour < 18 ? "Good afternoon" : "Good evening")
+        return userManager.displayName.isEmpty ? salutation : "\(salutation), \(userManager.displayName)"
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("LINGOLOG")
-                            .font(.caption.weight(.bold))
-                            .tracking(1.8)
-                            .foregroundStyle(Theme.Colors.accent)
-                        Text(greeting)
-                            .font(.system(size: 40, weight: .regular))
-                            .tracking(-1.4)
-                            .foregroundStyle(Theme.Colors.textPrimary)
-                            .minimumScaleFactor(0.8)
-                        Text("Build a vocabulary that stays with you.")
-                            .font(.title3)
-                            .foregroundStyle(Theme.Colors.textSecondary)
+            ZStack {
+                AmbientBackground()
 
-                        if let space = languageSpaceManager.activeSpace {
-                            LanguageSpaceSwitcher(space: space) {
-                                showingLanguageSpaces = true
-                            }
-                            .padding(.top, 2)
-                        }
-                    }
-                    .padding(.top, 12)
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 28) {
+                        header
 
-                    HStack(spacing: 12) {
-                        QuickActionButton(
-                            title: "Add a word",
-                            subtitle: languageSpaceManager.activeSpace.map { "Add \($0.learningLanguageName)" } ?? "Capture something new",
-                            icon: "plus"
-                        ) { showingAddWord = true }
-                        QuickActionButton(title: "Review", subtitle: "\(viewModel.wordsDueForReview) ready today", icon: "arrow.right") { showingQuiz = true }
-                    }
-
-                    VStack(alignment: .leading, spacing: 22) {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text("Your progress").font(.title2.weight(.medium))
-                            Spacer()
-                            Text("THIS WEEK").font(.caption2.weight(.bold)).tracking(1.2).foregroundStyle(Theme.Colors.textSecondary)
-                        }
-
-                        HStack(alignment: .bottom, spacing: 8) {
-                            Text("\(viewModel.learningStreak)").font(.system(size: 58, weight: .regular)).tracking(-2)
-                            Text(viewModel.learningStreak == 1 ? "day streak" : "day streak")
-                                .font(.headline).foregroundStyle(Theme.Colors.textSecondary).padding(.bottom, 10)
-                            Spacer()
-                            Image(systemName: "flame.fill").font(.title2).foregroundStyle(Theme.Colors.accent)
-                        }
-
-                        GeometryReader { proxy in
-                            let ratio = viewModel.totalWords == 0 ? 0 : CGFloat(viewModel.masteredWords) / CGFloat(viewModel.totalWords)
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(Theme.Colors.inactive).frame(height: 5)
-                                Capsule().fill(Theme.Colors.accent).frame(width: proxy.size.width * ratio, height: 5)
-                            }
-                        }
-                        .frame(height: 5)
-
-                        HStack {
-                            Metric(value: "\(viewModel.totalWords)", label: "words saved")
-                            Spacer()
-                            Metric(value: "\(viewModel.masteredWords)", label: "mastered")
-                            Spacer()
-                            Metric(value: "\(viewModel.wordsDueForReview)", label: "due now")
-                        }
-                    }
-                    .padding(24)
-                    .glassCard()
-
-                    if viewModel.totalWords > 0 {
-                        RecentWordsSection(
-                            wordRepository: wordRepository,
-                            languageCode: languageSpaceManager.activeSpace?.learningLanguageCode
+                        DailyLoopCard(
+                            languageName: languageSpaceManager.activeSpace?.learningLanguageName ?? "Language",
+                            totalWords: viewModel.totalWords,
+                            masteredWords: viewModel.masteredWords,
+                            dueWords: viewModel.wordsDueForReview,
+                            streak: viewModel.learningStreak,
+                            onSave: { showingAddWord = true },
+                            onPractice: { showingQuiz = true }
                         )
-                    } else {
-                        EmptyStateView()
+
+                        WordTrailView(
+                            totalWords: viewModel.totalWords,
+                            dueWords: viewModel.wordsDueForReview,
+                            masteredWords: viewModel.masteredWords
+                        )
+
+                        if viewModel.totalWords > 0 {
+                            RecentWordsSection(
+                                wordRepository: wordRepository,
+                                languageCode: languageSpaceManager.activeSpace?.learningLanguageCode
+                            )
+                        }
                     }
+                    .padding(.horizontal, Theme.Metrics.pagePadding)
+                    .padding(.top, 12)
+                    .padding(.bottom, 36)
                 }
-                .padding(.horizontal, Theme.Metrics.pagePadding)
-                .padding(.bottom, 28)
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
-            .background(Theme.Colors.background)
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showingAddWord) {
                 AddWordView(
@@ -129,6 +84,7 @@ struct DashboardView: View {
                     translationService: translationService,
                     languageSpaceManager: languageSpaceManager
                 )
+                .presentationCornerRadius(28)
             }
             .sheet(isPresented: $showingQuiz) {
                 QuizView(
@@ -136,6 +92,7 @@ struct DashboardView: View {
                     dataManager: dataManager,
                     languageSpaceManager: languageSpaceManager
                 )
+                .presentationCornerRadius(28)
             }
             .sheet(isPresented: $showingLanguageSpaces) {
                 LanguageSpacesView(
@@ -143,82 +100,277 @@ struct DashboardView: View {
                     storeManager: storeManager,
                     translationService: translationService
                 )
+                .presentationCornerRadius(28)
             }
         }
         .onAppear { viewModel.refresh() }
     }
-}
 
-private struct Metric: View {
-    let value: String; let label: String
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(value).font(.title2.weight(.medium)).monospacedDigit()
-            Text(label).font(.caption).foregroundStyle(Theme.Colors.textSecondary)
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            PageHeader(greeting, subtitle: "Keep a word. Meet it again. Make it yours.")
+
+            if let space = languageSpaceManager.activeSpace {
+                LanguageSpaceSwitcher(space: space) {
+                    showingLanguageSpaces = true
+                }
+            }
         }
     }
 }
 
-struct QuickActionButton: View {
-    let title: String; let subtitle: String; let icon: String; let action: () -> Void
+private struct DailyLoopCard: View {
+    let languageName: String
+    let totalWords: Int
+    let masteredWords: Int
+    let dueWords: Int
+    let streak: Int
+    let onSave: () -> Void
+    let onPractice: () -> Void
+
+    private var headline: String {
+        if dueWords > 0 {
+            return "\(dueWords) \(dueWords == 1 ? "word is" : "words are") ready to stick."
+        }
+        if totalWords == 0 {
+            return "Catch one word before it disappears."
+        }
+        return "Your words are resting. Add another?"
+    }
+
+    private var supportingText: String {
+        if dueWords > 0 { return "A quick round is all it takes to strengthen them." }
+        if totalWords == 0 { return "Save it now. LingoLog will bring it back later." }
+        return "Nothing is due yet. Your next review will arrive at the right time."
+    }
+
     var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack { Image(systemName: icon).font(.headline); Spacer() }
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(title).font(.title3.weight(.medium))
-                    Text(subtitle).font(.caption).foregroundStyle(Theme.Colors.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Today’s loop")
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                    Text(languageName)
+                        .font(.caption)
+                        .opacity(0.78)
+                }
+                Spacer()
+                if streak > 0 {
+                    Label("\(streak)", systemImage: "flame.fill")
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                        .padding(.horizontal, 11)
+                        .frame(minHeight: 36)
+                        .background(.white.opacity(0.16), in: Capsule())
+                        .accessibilityLabel("\(streak) day streak")
                 }
             }
-            .foregroundStyle(Theme.Colors.textPrimary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
-            .glassCard()
+
+            VStack(alignment: .leading, spacing: 7) {
+                Text(headline)
+                    .font(.system(.title, design: .rounded).weight(.heavy))
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(supportingText)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.82))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if dueWords > 0 {
+                Button(action: onPractice) {
+                    Label("Practice now", systemImage: "arrow.forward")
+                }
+                .lightButtonStyle()
+
+                Button(action: onSave) {
+                    Label("Save another word", systemImage: "plus")
+                        .font(.system(.subheadline, design: .rounded).weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .tactileButtonStyle()
+            } else {
+                Button(action: onSave) {
+                    Label("Save a word", systemImage: "plus")
+                }
+                .lightButtonStyle()
+
+                Label(totalWords == 0 ? "Practice unlocks when a word is ready" : "Practice is caught up", systemImage: "checkmark.circle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+
+            HStack(spacing: 0) {
+                loopStat(value: totalWords, label: "saved")
+                loopDivider
+                loopStat(value: masteredWords, label: "solid")
+                loopDivider
+                loopStat(value: dueWords, label: "ready")
+            }
+            .padding(.top, 2)
         }
-        .buttonStyle(.plain)
-        .accessibilityHint(subtitle)
+        .foregroundStyle(.white)
+        .padding(20)
+        .background(Theme.Colors.accentField)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.cardRadius, style: .continuous))
+        .accessibilityElement(children: .contain)
+    }
+
+    private func loopStat(value: Int, label: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text("\(value)")
+                .font(.system(.headline, design: .rounded).weight(.heavy))
+                .monospacedDigit()
+            Text(label)
+                .font(.caption)
+                .opacity(0.76)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var loopDivider: some View {
+        Rectangle()
+            .fill(.white.opacity(0.2))
+            .frame(width: 1, height: 24)
+    }
+}
+
+private struct WordTrailView: View {
+    let totalWords: Int
+    let dueWords: Int
+    let masteredWords: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 17) {
+            SectionHeading(title: "Your word trail")
+
+            HStack(spacing: 8) {
+                TrailMilestone(
+                    value: totalWords,
+                    label: "Catch",
+                    mark: "Aa",
+                    color: Theme.Colors.sky,
+                    isActive: totalWords > 0
+                )
+
+                trailLine(color: totalWords > 0 ? Theme.Colors.sky : Theme.Colors.raised)
+
+                TrailMilestone(
+                    value: dueWords,
+                    label: "Recall",
+                    symbol: "arrow.triangle.2.circlepath",
+                    color: Theme.Colors.violet,
+                    isActive: totalWords > 0
+                )
+
+                trailLine(color: masteredWords > 0 ? Theme.Colors.violet : Theme.Colors.raised)
+
+                TrailMilestone(
+                    value: masteredWords,
+                    label: "Keep",
+                    symbol: "checkmark",
+                    color: Theme.Colors.accent,
+                    isActive: masteredWords > 0
+                )
+            }
+
+            Text(totalWords == 0
+                 ? "Every saved word starts here, then moves forward as you recall it."
+                 : "Words move along the trail each time you remember them.")
+                .font(.subheadline)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func trailLine(color: Color) -> some View {
+        Capsule()
+            .fill(color)
+            .frame(maxWidth: .infinity)
+            .frame(height: 6)
+            .offset(y: -13)
+    }
+}
+
+private struct TrailMilestone: View {
+    let value: Int
+    let label: String
+    var mark: String? = nil
+    var symbol: String? = nil
+    let color: Color
+    let isActive: Bool
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(isActive ? Color.black.opacity(0.18) : Theme.Colors.neutralDepth)
+                    .offset(y: 3)
+                Circle()
+                    .fill(isActive ? color : Theme.Colors.raised)
+                if let mark {
+                    Text(mark)
+                        .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                } else if let symbol {
+                    Image(systemName: symbol)
+                        .font(.subheadline.weight(.bold))
+                }
+            }
+            .foregroundStyle(isActive ? .white : Theme.Colors.textTertiary)
+            .frame(width: 50, height: 50)
+            .padding(.bottom, 3)
+
+            VStack(spacing: 1) {
+                Text("\(value)")
+                    .font(.system(.headline, design: .rounded).weight(.heavy))
+                    .monospacedDigit()
+                Text(label)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            }
+        }
+        .frame(minWidth: 58)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(value) \(label)")
     }
 }
 
 struct RecentWordsSection: View {
     @ObservedObject var wordRepository: WordRepository
     let languageCode: String?
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Recently added").font(.title2.weight(.medium))
-                Spacer()
-                Text("LATEST").font(.caption2.weight(.bold)).tracking(1.2).foregroundStyle(Theme.Colors.textSecondary)
-            }.padding(.bottom, 12)
-            let recentWords = wordRepository.words(for: languageCode)
-            ForEach(Array(recentWords.prefix(5)), id: \.id) { word in
-                HStack(spacing: 14) {
-                    Circle().fill(Theme.Colors.accent).frame(width: 7, height: 7)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(word.word ?? "").font(.headline)
-                        Text(word.translation ?? "").font(.subheadline).foregroundStyle(Theme.Colors.textSecondary)
-                    }
-                    Spacer()
-                    Text(word.language ?? "").font(.caption).foregroundStyle(Theme.Colors.textSecondary)
-                }
-                .padding(.vertical, 15)
-                if word.id != recentWords.prefix(5).last?.id { Divider().foregroundStyle(Theme.Colors.divider) }
-            }
-        }
-        .padding(22)
-        .glassCard()
-    }
-}
 
-struct EmptyStateView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Your first word starts here.").font(.title2.weight(.medium))
-            Text("Save a word you want to remember. LingoLog will bring it back at the right time.")
-                .foregroundStyle(Theme.Colors.textSecondary)
-            Image(systemName: "arrow.up.right").foregroundStyle(Theme.Colors.accent).padding(.top, 8)
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(24).glassCard()
+            SectionHeading(title: "Recently caught")
+
+            VStack(spacing: 0) {
+                let recentWords = Array(wordRepository.words(for: languageCode).prefix(5))
+                ForEach(Array(recentWords.enumerated()), id: \.element.id) { index, word in
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(word.word ?? "")
+                                .font(.headline)
+                            Text(word.translation ?? "")
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.Colors.textSecondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.forward")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Theme.Colors.textTertiary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+
+                    if index < recentWords.count - 1 {
+                        Divider().padding(.leading, 16)
+                    }
+                }
+            }
+            .glassCard()
+        }
     }
+
 }
 
 #Preview {

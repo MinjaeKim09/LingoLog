@@ -3,14 +3,12 @@ import SwiftUI
 struct NoWordsView: View {
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 60))
-                .foregroundColor(Theme.Colors.success)
+            IconTile(symbol: "checkmark", color: Theme.Colors.success, size: 64)
             
-            Theme.Typography.title("No words due for review!")
+            Theme.Typography.title("You’re caught up")
                 .foregroundStyle(Theme.Colors.textPrimary)
             
-            Theme.Typography.body("Great job! All your words are up to date. Add some new words to start learning.")
+            Theme.Typography.body("Everything is up to date. Add another word or come back after the next review is ready.")
                 .foregroundColor(Theme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
         }

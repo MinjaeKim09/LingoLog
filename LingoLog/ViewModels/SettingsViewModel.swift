@@ -26,30 +26,24 @@ final class SettingsViewModel: ObservableObject {
     }
     
     func refresh() {
-        updateStats(words: wordsForActiveSpace)
+        updateStats(words: wordRepository.words, spaceID: languageSpaceManager.activeSpaceID)
     }
     
     private func bind() {
         wordRepository.$words
-            .sink { [weak self] _ in
-                guard let self else { return }
-                self.updateStats(words: self.wordsForActiveSpace)
-            }
-            .store(in: &cancellables)
-
-        languageSpaceManager.$activeSpaceID
-            .sink { [weak self] _ in
-                self?.refresh()
+            .combineLatest(languageSpaceManager.$activeSpaceID)
+            .sink { [weak self] words, spaceID in
+                self?.updateStats(words: words, spaceID: spaceID)
             }
             .store(in: &cancellables)
     }
     
-    private func updateStats(words: [WordEntry]) {
+    private func updateStats(words: [WordEntry], spaceID: UUID?) {
+        let language = languageSpaceManager.spaces.first { $0.id == spaceID }?.learningLanguageCode
+        let words = words.filter { language == nil || $0.language == language }
         totalWords = words.count
         masteredWords = words.filter { $0.isMastered }.count
-        wordsDueForReview = wordRepository.dueWords(
-            for: languageSpaceManager.activeSpace?.learningLanguageCode
-        ).count
+        wordsDueForReview = words.filter { !$0.isMastered && $0.isDueForReview }.count
         
         let grouped = Dictionary(grouping: words, by: { $0.language ?? "Unknown" })
         languageStats = grouped
@@ -57,7 +51,4 @@ final class SettingsViewModel: ObservableObject {
             .sorted { $0.language < $1.language }
     }
 
-    private var wordsForActiveSpace: [WordEntry] {
-        wordRepository.words(for: languageSpaceManager.activeSpace?.learningLanguageCode)
-    }
 }

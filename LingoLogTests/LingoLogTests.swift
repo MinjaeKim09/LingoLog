@@ -6,10 +6,26 @@
 //
 
 import Foundation
+import SwiftUI
 import Testing
+import UIKit
 @testable import LingoLog
 
 struct LingoLogTests {
+
+    @Test func eightDigitHexColorSeparatesARGBChannels() {
+        let color = UIColor(Color(hex: "80112233"))
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+
+        #expect(color.getRed(&red, green: &green, blue: &blue, alpha: &alpha))
+        #expect(abs(red - 17.0 / 255.0) < 0.001)
+        #expect(abs(green - 34.0 / 255.0) < 0.001)
+        #expect(abs(blue - 51.0 / 255.0) < 0.001)
+        #expect(abs(alpha - 128.0 / 255.0) < 0.001)
+    }
 
     @Test func storyQuestionDecodesWithoutAnIdentifier() throws {
         let data = Data("""
@@ -85,7 +101,7 @@ struct LingoLogTests {
             forKey: "languageSpaces.v1"
         )
 
-        let manager = LanguageSpaceManager(dataManager: .shared, defaults: defaults)
+        let manager = LanguageSpaceManager(dataManager: DataManager(inMemory: true), defaults: defaults)
         let japanese = try manager.addSpace(
             learningLanguageCode: "ja",
             meaningLanguageCode: "en"

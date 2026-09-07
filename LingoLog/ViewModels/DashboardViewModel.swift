@@ -31,49 +31,43 @@ final class DashboardViewModel: ObservableObject {
     }
     
     func refresh() {
-        updateCounts(words: wordsForActiveSpace)
+        updateCounts(words: wordRepository.words, spaceID: languageSpaceManager.activeSpaceID)
         learningStreak = studyHistoryManager.getCurrentStreak()
         updateNotificationTime()
     }
     
     private func bind() {
         wordRepository.$words
-            .sink { [weak self] _ in
-                guard let self else { return }
-                self.updateCounts(words: self.wordsForActiveSpace)
-            }
-            .store(in: &cancellables)
-
-        languageSpaceManager.$activeSpaceID
-            .sink { [weak self] _ in
-                self?.refresh()
+            .combineLatest(languageSpaceManager.$activeSpaceID)
+            .sink { [weak self] words, spaceID in
+                self?.updateCounts(words: words, spaceID: spaceID)
             }
             .store(in: &cancellables)
         
         dataManager.$notificationHour
-            .merge(with: dataManager.$notificationMinute)
-            .sink { [weak self] _ in
-                self?.updateNotificationTime()
+            .combineLatest(dataManager.$notificationMinute)
+            .sink { [weak self] hour, minute in
+                self?.updateNotificationTime(hour: hour, minute: minute)
             }
             .store(in: &cancellables)
     }
     
-    private func updateCounts(words: [WordEntry]) {
+    private func updateCounts(words: [WordEntry], spaceID: UUID?) {
+        let language = languageSpaceManager.spaces.first { $0.id == spaceID }?.learningLanguageCode
+        let words = words.filter { language == nil || $0.language == language }
         totalWords = words.count
         masteredWords = words.filter { $0.isMastered }.count
-        wordsDueForReview = wordRepository.dueWords(
-            for: languageSpaceManager.activeSpace?.learningLanguageCode
-        ).count
-    }
-
-    private var wordsForActiveSpace: [WordEntry] {
-        wordRepository.words(for: languageSpaceManager.activeSpace?.learningLanguageCode)
+        wordsDueForReview = words.filter { !$0.isMastered && $0.isDueForReview }.count
     }
     
     private func updateNotificationTime() {
+        updateNotificationTime(hour: dataManager.notificationHour, minute: dataManager.notificationMinute)
+    }
+
+    private func updateNotificationTime(hour: Int, minute: Int) {
         let comps = DateComponents(
-            hour: dataManager.notificationHour,
-            minute: dataManager.notificationMinute
+            hour: hour,
+            minute: minute
         )
         let date = Calendar.current.date(from: comps) ?? Date()
         let formatter = DateFormatter()

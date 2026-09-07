@@ -4,27 +4,32 @@ import SwiftUI
 
 @MainActor
 final class AddWordViewModel: ObservableObject {
-    @Published var inputText: String = ""
+    @Published var inputText: String = "" {
+        didSet { translate(text: inputText) }
+    }
     @Published private(set) var space: LanguageSpace?
     @Published private(set) var inputSide: VocabularyInputSide = .learningLanguage
-    @Published var translation: String?
+    @Published private(set) var translation: String?
     @Published var context: String = ""
     @Published var isTranslating: Bool = false
     @Published var errorMessage: String?
     
     private let dataManager: DataManager
-    private let translationService: TranslationService
+    private let translationService: any VocabularyTranslating
+    private let translationDelay: Duration
     private let languageSpaceManager: LanguageSpaceManager
     private var cancellables = Set<AnyCancellable>()
     private var translationTask: Task<Void, Never>?
     
     init(
         dataManager: DataManager,
-        translationService: TranslationService,
-        languageSpaceManager: LanguageSpaceManager
+        translationService: any VocabularyTranslating,
+        languageSpaceManager: LanguageSpaceManager,
+        translationDelay: Duration = .milliseconds(500)
     ) {
         self.dataManager = dataManager
         self.translationService = translationService
+        self.translationDelay = translationDelay
         self.languageSpaceManager = languageSpaceManager
         self.space = languageSpaceManager.activeSpace
         
@@ -62,22 +67,19 @@ final class AddWordViewModel: ObservableObject {
     }
 
     func switchInputLanguage() {
-        translationTask?.cancel()
-        let previousInput = inputText
         let previousTranslation = translation
         inputSide = inputSide == .learningLanguage ? .meaningLanguage : .learningLanguage
 
         if let previousTranslation, !previousTranslation.isEmpty {
             inputText = previousTranslation
-            translation = previousInput
+        } else {
+            translate(text: inputText)
         }
-        translate(text: inputText)
-        errorMessage = nil
     }
 
     @discardableResult
     func saveTranslation() -> Bool {
-        guard let pair = normalizedVocabularyPair else { return false }
+        guard canSave, let pair = normalizedVocabularyPair else { return false }
         dataManager.addWord(
             word: pair.term,
             translation: pair.meaning,
@@ -97,31 +99,24 @@ final class AddWordViewModel: ObservableObject {
     }
     
     private func bind() {
-        $inputText
-            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
-            .sink { [weak self] value in
-                self?.translate(text: value)
-            }
-            .store(in: &cancellables)
-        
         languageSpaceManager.$activeSpaceID
             .dropFirst()
-            .sink { [weak self] _ in
+            .sink { [weak self] id in
                 guard let self else { return }
-                space = languageSpaceManager.activeSpace
+                space = languageSpaceManager.spaces.first { $0.id == id }
                 inputSide = .learningLanguage
-                translation = nil
-                if !inputText.isEmpty {
-                    translate(text: inputText)
-                }
+                translate(text: inputText)
             }
             .store(in: &cancellables)
     }
     
     private func translate(text: String) {
         translationTask?.cancel()
+        // Invalidate immediately, including while the next request is debouncing.
+        translation = nil
+        errorMessage = nil
         
-        guard !text.isEmpty else {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                 translation = nil
                 isTranslating = false
@@ -139,29 +134,35 @@ final class AddWordViewModel: ObservableObject {
         isTranslating = true
         errorMessage = nil
         
-        translationTask = Task { [sourceLanguage, targetLanguage] in
+        translationTask = Task { [weak self, translationService, translationDelay, sourceLanguage, targetLanguage] in
             do {
+                try await Task.sleep(for: translationDelay)
                 let result = try await translationService.translate(
                     text: text,
                     from: sourceLanguage,
                     to: targetLanguage
                 )
-                await MainActor.run {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                        self.translation = result
-                        self.isTranslating = false
-                    }
+                // Some providers finish even after cancellation. Only the latest task
+                // may publish a result or change the loading state.
+                try Task.checkCancellation()
+                guard let self else { return }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    self.translation = result
+                    self.isTranslating = false
                 }
             } catch {
-                await MainActor.run {
-                    withAnimation {
-                        self.translation = nil
-                        self.errorMessage = "Translation failed: \(error.localizedDescription)"
-                        self.isTranslating = false
-                    }
+                guard !Task.isCancelled, let self else { return }
+                withAnimation {
+                    self.translation = nil
+                    self.errorMessage = "Translation failed: \(error.localizedDescription)"
+                    self.isTranslating = false
                 }
             }
         }
+    }
+
+    deinit {
+        translationTask?.cancel()
     }
 
     private var normalizedVocabularyPair: NormalizedVocabularyPair? {

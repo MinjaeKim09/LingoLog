@@ -22,27 +22,10 @@ struct PaywallView: View {
                     .padding(.top, 8)
                     
                     // Hero Icon
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Theme.Colors.accent.opacity(0.2), Theme.Colors.secondaryAccent.opacity(0.15)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 120, height: 120)
-                        
-                        Image(systemName: "book.pages.fill")
-                            .font(.system(size: 50))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [Theme.Colors.accent, Theme.Colors.secondaryAccent],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    }
+                    Image(systemName: "books.vertical.fill")
+                        .font(.largeTitle)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Theme.Colors.accent)
                     
                     // Title
                     VStack(spacing: 8) {
@@ -50,7 +33,7 @@ struct PaywallView: View {
                             .foregroundStyle(Theme.Colors.textPrimary)
                             .multilineTextAlignment(.center)
                         
-                        Theme.Typography.body("Unlock AI-generated stories and separate spaces for every language you learn")
+                        Theme.Typography.body("Unlock personalized daily reading and a separate space for every language you learn")
                             .foregroundStyle(Theme.Colors.textSecondary)
                             .multilineTextAlignment(.center)
                     }
@@ -58,22 +41,22 @@ struct PaywallView: View {
                     // Feature List
                     VStack(alignment: .leading, spacing: 16) {
                         FeatureRow(
-                            icon: "sparkles",
-                            title: "AI-Generated Stories",
+                            icon: "text.book.closed.fill",
+                            title: "Personalized Stories",
                             subtitle: "Personalized stories using your vocabulary"
                         )
                         FeatureRow(
-                            icon: "brain.head.profile",
+                            icon: "checkmark.bubble.fill",
                             title: "Comprehension Quizzes",
                             subtitle: "Test your understanding after each story"
                         )
                         FeatureRow(
-                            icon: "calendar",
+                            icon: "calendar.badge.clock",
                             title: "Daily Fresh Content",
                             subtitle: "Generate one new story each day"
                         )
                         FeatureRow(
-                            icon: "rectangle.stack.badge.plus",
+                            icon: "books.vertical.fill",
                             title: "Language Spaces",
                             subtitle: "Keep every language’s words, reviews, and stories separate"
                         )
@@ -92,23 +75,13 @@ struct PaywallView: View {
                                         ProgressView()
                                             .tint(.white)
                                     } else {
-                                        Image(systemName: "sparkles")
+                                        Image(systemName: "lock.open.fill")
                                         Text("Subscribe for \(product.displayPrice) / month")
                                     }
                                 }
                                 .frame(maxWidth: .infinity)
-                                .padding()
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Theme.Colors.accent, Theme.Colors.secondaryAccent],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .cornerRadius(14)
                             }
+                            .primaryButtonStyle()
                             .disabled(storeManager.isPurchasing)
                         } else if storeManager.isLoadingProducts {
                             ProgressView("Loading price...")

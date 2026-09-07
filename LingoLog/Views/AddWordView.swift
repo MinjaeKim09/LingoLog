@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct AddWordView: View {
     @Environment(\.dismiss) private var dismiss
@@ -6,8 +7,10 @@ struct AddWordView: View {
     let translationService: TranslationService
     let languageSpaceManager: LanguageSpaceManager
     @StateObject private var viewModel: AddWordViewModel
-
     @State private var showingContext = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case word, context }
 
     init(
         dataManager: DataManager,
@@ -29,130 +32,181 @@ struct AddWordView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.background.ignoresSafeArea()
+                AmbientBackground()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        if let space = viewModel.space {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(space.subtitle)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Theme.Colors.accent)
-                                Text("Add a term in either language. LingoLog saves it as \(space.learningLanguageName) for this space.")
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.Colors.textSecondary)
-                            }
-                        }
+                        PageHeader(
+                            "Save a word",
+                            subtitle: "Type in either language. We’ll work out the other side."
+                        )
 
-                        VStack(alignment: .leading, spacing: 12) {
-                            Theme.Typography.title("\(viewModel.inputLanguageName) word or phrase")
-                                .foregroundColor(Theme.Colors.textPrimary)
-
-                            TextField(
-                                "Type or paste in \(viewModel.inputLanguageName)",
-                                text: $viewModel.inputText
-                            )
-                            .padding()
-                            .background(Theme.Colors.inputBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .font(.system(.body, design: .rounded))
-                            .autocapitalization(.none)
-                            .disableAutocorrection(true)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Theme.Colors.divider, lineWidth: 1)
-                            )
-
-                            Button(viewModel.switchInputLanguageLabel) {
-                                viewModel.switchInputLanguage()
-                            }
-                            .font(.subheadline)
-                            .foregroundStyle(Theme.Colors.accent)
-                            .disabled(viewModel.isTranslating || !viewModel.languagePairIsValid)
-                        }
-                        .padding()
-                        .glassCard()
+                        inputCard
 
                         if viewModel.isTranslating && viewModel.translation == nil {
-                            HStack(spacing: 12) {
-                                ProgressView()
-                                Text("Translating…")
-                                    .foregroundStyle(Theme.Colors.textSecondary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding()
-                            .glassCard()
+                            translatingCard
+                                .transition(.move(edge: .top).combined(with: .opacity))
                         }
 
                         if let translated = viewModel.translation, !translated.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    Theme.Typography.title("\(viewModel.outputLanguageName) \(viewModel.inputSide == .learningLanguage ? "meaning" : "term")")
-                                        .foregroundColor(Theme.Colors.textPrimary)
-                                    Spacer()
-                                    if viewModel.isTranslating {
-                                        ProgressView().scaleEffect(0.75)
-                                    }
-                                }
-
-                                Text(translated)
-                                    .font(.system(.title3, design: .serif))
-                                    .fontWeight(.medium)
-                                    .foregroundColor(Theme.Colors.textPrimary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding()
-                                    .background(Theme.Colors.accent.opacity(0.1))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-                            .padding()
-                            .glassCard()
+                            translationCard(translated)
+                                .transition(.scale(scale: 0.97).combined(with: .opacity))
                         }
 
-                        DisclosureGroup("Add context (optional)", isExpanded: $showingContext) {
-                            TextField("Where did you see this?", text: $viewModel.context)
-                                .padding(.top, 10)
-                                .textFieldStyle(.roundedBorder)
-                        }
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                        .padding()
-                        .glassCard()
+                        contextCard
 
                         if let error = viewModel.errorMessage {
-                            Text(error)
+                            Label(error, systemImage: "exclamationmark.triangle.fill")
                                 .font(.caption)
                                 .foregroundStyle(Theme.Colors.error)
+                                .padding(.horizontal, 4)
+                                .transition(.opacity)
                         }
                     }
-                    .padding()
+                    .padding(Theme.Metrics.pagePadding)
+                    .padding(.bottom, 100)
+                    .animation(Theme.Motion.standard, value: viewModel.translation)
+                    .animation(Theme.Motion.standard, value: viewModel.isTranslating)
+                }
+                .scrollDismissesKeyboard(.interactively)
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
                 }
             }
-            .navigationTitle("Add \(viewModel.space?.learningLanguageName ?? "Word")")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    if viewModel.saveTranslation() {
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        dismiss()
+                    }
+                } label: {
+                    Label("Save to Words", systemImage: "checkmark")
+                }
+                .primaryButtonStyle()
+                .disabled(!viewModel.canSave)
+                .padding(.horizontal, Theme.Metrics.pagePadding)
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial)
+            }
+            .onAppear { focusedField = .word }
+        }
+    }
+
+    private var inputCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Catch a word")
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                    Text(viewModel.inputLanguageName)
+                        .font(.caption)
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        if viewModel.saveTranslation() {
-                            dismiss()
-                        }
+                Spacer()
+                if viewModel.languagePairIsValid {
+                    Button {
+                        withAnimation(Theme.Motion.quick) { viewModel.switchInputLanguage() }
+                        focusedField = .word
+                    } label: {
+                        Label("Swap", systemImage: "arrow.left.arrow.right")
+                            .font(.caption.weight(.semibold))
                     }
-                    .fontWeight(.semibold)
-                    .disabled(!viewModel.canSave)
-                    .foregroundStyle(viewModel.canSave ? Theme.Colors.accent : Color.gray)
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.capsule)
+                    .tint(Theme.Colors.accent)
+                    .disabled(viewModel.isTranslating)
                 }
             }
+
+            TextField("Type or paste in \(viewModel.inputLanguageName)", text: $viewModel.inputText, axis: .vertical)
+                .focused($focusedField, equals: .word)
+                .font(.title3.weight(.medium))
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+                .lineLimit(2...5)
+                .padding(16)
+                .background(Theme.Colors.inputBackground, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .stroke(focusedField == .word ? Theme.Colors.accent : Theme.Colors.divider.opacity(0.5), lineWidth: focusedField == .word ? 1.5 : 0.5)
+                }
+
+            if let space = viewModel.space {
+                Label(space.subtitle, systemImage: "arrow.triangle.branch")
+                    .font(.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            }
         }
+        .padding(18)
+        .glassCard()
+    }
+
+    private var translatingCard: some View {
+        HStack(spacing: 13) {
+            ProgressView().tint(Theme.Colors.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Finding the meaning…").font(.subheadline.weight(.semibold))
+                Text("This usually takes just a moment").font(.caption).foregroundStyle(Theme.Colors.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .glassCard()
+    }
+
+    private func translationCard(_ translated: String) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Meaning found")
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                    Text(viewModel.outputLanguageName)
+                        .font(.caption)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+                Spacer()
+                Image(systemName: "checkmark.circle.fill")
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(Theme.Colors.success)
+            }
+            Text(translated)
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(Theme.Colors.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(17)
+                .background(Theme.Colors.accentSurface, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        }
+        .padding(18)
+        .glassCard()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(viewModel.outputLanguageName): \(translated)")
+    }
+
+    private var contextCard: some View {
+        DisclosureGroup(isExpanded: $showingContext) {
+            TextField("A sentence, place, or memory", text: $viewModel.context, axis: .vertical)
+                .focused($focusedField, equals: .context)
+                .lineLimit(2...4)
+                .padding(14)
+                .background(Theme.Colors.inputBackground, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .padding(.top, 12)
+        } label: {
+            Label("Add a memory cue", systemImage: "quote.bubble")
+                .font(.headline)
+                .foregroundStyle(Theme.Colors.textPrimary)
+        }
+        .tint(Theme.Colors.accent)
+        .padding(18)
+        .glassCard()
     }
 }
 
 #Preview {
     AddWordView(
-        dataManager: DataManager.shared,
-        translationService: TranslationService.shared,
-        languageSpaceManager: LanguageSpaceManager.shared
+        dataManager: .shared,
+        translationService: .shared,
+        languageSpaceManager: .shared
     )
 }

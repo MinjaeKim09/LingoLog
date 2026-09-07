@@ -4,8 +4,10 @@ struct StoryReadingView: View {
     @ObservedObject var viewModel: StoryViewModel
     
     var body: some View {
-        NavigationView {
-            ScrollView {
+        NavigationStack {
+            ZStack {
+                AmbientBackground()
+                ScrollView {
                 VStack(spacing: 24) {
                     if let story = viewModel.currentStory {
                         // Story Header
@@ -23,9 +25,10 @@ struct StoryReadingView: View {
                         Spacer(minLength: 50)
                     }
                 }
-                .padding()
+                    .padding(Theme.Metrics.pagePadding)
+                }
+                .scrollIndicators(.hidden)
             }
-            .background(Theme.Colors.background)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -41,22 +44,17 @@ struct StoryReadingView: View {
                     }
                 }
                 
-                ToolbarItem(placement: .principal) {
-                    Theme.Typography.title("Story")
-                        .foregroundStyle(Theme.Colors.textPrimary)
-                }
             }
         }
-        .navigationViewStyle(.stack)
     }
     
     // MARK: - Story Header
     
     private func storyHeader(story: DailyStory) -> some View {
         VStack(spacing: 12) {
+            IconTile(symbol: "text.book.closed.fill", size: 54)
             Text(story.title ?? "Untitled Story")
-                .font(.system(.title, design: .serif))
-                .fontWeight(.bold)
+                .font(.title.weight(.bold))
                 .foregroundStyle(Theme.Colors.textPrimary)
                 .multilineTextAlignment(.center)
             
@@ -93,8 +91,8 @@ struct StoryReadingView: View {
     private func storyContent(story: DailyStory) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(story.content ?? "")
-                .font(.system(.body, design: .serif))
-                .lineSpacing(8)
+                .font(.body)
+                .lineSpacing(9)
                 .foregroundStyle(Theme.Colors.textPrimary)
         }
         .padding(24)
@@ -106,14 +104,7 @@ struct StoryReadingView: View {
     
     private var wordsUsedSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "text.book.closed")
-                    .foregroundStyle(Theme.Colors.accent)
-                Theme.Typography.title("Vocabulary in Story")
-                    .font(.headline)
-                    .foregroundColor(Theme.Colors.textSecondary)
-            }
-            .padding(.leading, 4)
+            SectionHeading(title: "Words in this story")
             
             let words = viewModel.wordsUsedInStory()
             
@@ -121,7 +112,7 @@ struct StoryReadingView: View {
                 Text("No vocabulary words found")
                     .font(.caption)
                     .foregroundStyle(Theme.Colors.textSecondary)
-                    .padding()
+                    .padding(14)
                     .frame(maxWidth: .infinity)
                     .glassCard()
             } else {
@@ -162,12 +153,7 @@ struct StoryReadingView: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .padding()
-                    .foregroundColor(Theme.Colors.accent)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Theme.Colors.accent.opacity(0.3), lineWidth: 1)
-                    )
+                    .secondaryButtonStyle()
                 }
                 .padding(24)
                 .glassCard()
@@ -217,12 +203,8 @@ struct WordChip: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Theme.Colors.cardBackground.opacity(0.5))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Theme.Colors.divider, lineWidth: 1)
-        )
+        .background(Theme.Colors.raised)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

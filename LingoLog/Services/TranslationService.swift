@@ -67,7 +67,11 @@ private struct TranslationErrorResponse: Decodable {
     let error: String?
 }
 
-final class TranslationService {
+protocol VocabularyTranslating {
+    func translate(text: String, from sourceLang: String, to targetLang: String) async throws -> String
+}
+
+final class TranslationService: VocabularyTranslating {
     static let shared = TranslationService()
 
     private let functionURL: URL?

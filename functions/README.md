@@ -9,8 +9,12 @@ This backend keeps Daily Stories local-first in the iOS app while protecting the
 - Verifies the StoreKit subscription transaction JWS with Apple's App Store Server Library.
 - Requires product ID `com.lingolog.dailystories.monthly`.
 - Enforces one generated story per `originalTransactionId` per UTC day.
+- Saves the completed response and its original vocabulary in the private `dailyStoryQuota` document before sending it. Same-language retries return that response, including when the original delivery failed; requests for a different language still share the daily allowance.
+- Returns HTTP 409 while generation is pending. Failed generations release their reservation, and abandoned reservations can be reclaimed after two minutes. Completed quotas created before response caching was introduced cannot recover their original content.
 - Calls Gemini with the private `GEMINI_API_KEY` secret.
 - Returns the same JSON shape used by the iOS `StoryResponse` model.
+
+Run `npm test` and `npm run lint` from `functions/` to check request validation, quota recovery, concurrent reservations, and retry behavior. Quota tests use an isolated transactional store and do not contact Firebase or provider APIs.
 
 `translation`
 

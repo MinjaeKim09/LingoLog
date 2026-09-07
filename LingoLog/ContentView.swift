@@ -11,6 +11,7 @@ struct ContentView: View {
     let environment: AppEnvironment
     @ObservedObject private var languageSpaceManager: LanguageSpaceManager
     @State private var selection = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(environment: AppEnvironment) {
         self.environment = environment
@@ -41,7 +42,7 @@ struct ContentView: View {
                 storeManager: environment.storeManager
             )
                 .tabItem {
-                    Image(systemName: "house.fill")
+                    Image(systemName: "point.3.connected.trianglepath.dotted")
                     Text("Today")
                 }.tag(0)
             
@@ -53,7 +54,7 @@ struct ContentView: View {
                 storeManager: environment.storeManager
             )
                 .tabItem {
-                    Image(systemName: "book.fill")
+                    Image(systemName: "character.textbox")
                     Text("Words")
                 }.tag(1)
             
@@ -63,8 +64,8 @@ struct ContentView: View {
                 languageSpaceManager: environment.languageSpaceManager
             )
                 .tabItem {
-                    Image(systemName: "brain.head.profile")
-                    Text("Quiz")
+                    Image(systemName: "target")
+                    Text("Practice")
                 }.tag(2)
             
             StoryView(
@@ -88,13 +89,15 @@ struct ContentView: View {
                 languageSpaceManager: environment.languageSpaceManager
             )
                 .tabItem {
-                    Image(systemName: "gear")
-                    Text("Settings")
+                    Image(systemName: "circle.grid.2x2.fill")
+                    Text("More")
                 }.tag(4)
         }
         .tint(Theme.Colors.accent)
         .toolbarBackground(.visible, for: .tabBar)
-        .toolbarBackground(Theme.Colors.background, for: .tabBar)
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+        .sensoryFeedback(.selection, trigger: selection)
+        .animation(reduceMotion ? nil : Theme.Motion.quick, value: selection)
     }
 }
 

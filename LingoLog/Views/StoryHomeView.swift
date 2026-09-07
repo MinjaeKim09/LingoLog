@@ -4,122 +4,73 @@ struct StoryHomeView: View {
     @ObservedObject var viewModel: StoryViewModel
     @ObservedObject var storeManager: StoreManager = .shared
     @State private var showingPaywall = false
-    
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    VStack(spacing: 8) {
-                        Theme.Typography.display("Daily Stories")
-                            .foregroundStyle(Theme.Colors.textPrimary)
-                        Theme.Typography.body("\(viewModel.activeLanguageName) vocabulary, brought to life")
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                    }
-                    .padding(.top, 20)
-                    
+                VStack(alignment: .leading, spacing: Theme.Metrics.sectionSpacing) {
+                    PageHeader(
+                        "Stories",
+                        subtitle: "Your \(viewModel.activeLanguageName) words, woven into something worth reading."
+                    )
+
                     if !viewModel.isGeminiConfigured {
-                        // API Not Configured Warning
-                        apiNotConfiguredView
+                        messageCard(
+                            icon: "exclamationmark.icloud.fill",
+                            color: Theme.Colors.warning,
+                            title: "Story service unavailable",
+                            message: "The story service needs to be configured before a reading can be created."
+                        )
                     } else if !viewModel.hasWords {
-                        // No words added yet
-                        noWordsView
+                        messageCard(
+                            icon: "character.book.closed.fill",
+                            color: Theme.Colors.secondaryAccent,
+                            title: "Build your word list first",
+                            message: "Save a few \(viewModel.activeLanguageName) words, then return to see them in context."
+                        )
                     } else {
-                        // Today's Story Card
-                        todayStorySection
-                        
-                        // Recent Stories
-                        if !viewModel.storyHistory.isEmpty {
-                            recentStoriesSection
-                        }
+                        todaySection
+                        if !viewModel.storyHistory.isEmpty { recentStoriesSection }
                     }
-                    
-                    Spacer(minLength: 50)
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, Theme.Metrics.pagePadding)
+                .padding(.top, 12)
+                .padding(.bottom, 36)
             }
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .alert("Error", isPresented: .constant(viewModel.error != nil)) {
-                Button("OK") {
-                    viewModel.clearError()
-                }
+            .scrollIndicators(.hidden)
+            .alert("Something went wrong", isPresented: .constant(viewModel.error != nil)) {
+                Button("OK") { viewModel.clearError() }
             } message: {
                 Text(viewModel.error ?? "")
             }
         }
-        .navigationViewStyle(.stack)
         .sheet(isPresented: $showingPaywall) {
             PaywallView(storeManager: storeManager)
+                .presentationCornerRadius(28)
         }
-        .task {
-            await viewModel.loadSupportedLanguages()
-        }
+        .task { await viewModel.loadSupportedLanguages() }
     }
-    
-    // MARK: - Backend Not Configured View
-    
-    private var apiNotConfiguredView: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                Circle()
-                    .fill(Theme.Colors.warning.opacity(0.1))
-                    .frame(width: 100, height: 100)
-                
-                Image(systemName: "server.rack")
-                    .font(.system(size: 40))
-                    .foregroundStyle(Theme.Colors.warning)
-            }
-            
-            VStack(spacing: 8) {
-                Theme.Typography.title("Story Service Required")
-                    .foregroundStyle(Theme.Colors.textPrimary)
-                
-                Theme.Typography.body("Configure the Daily Stories backend endpoint to generate stories.")
+
+    private func messageCard(icon: String, color: Color, title: String, message: String) -> some View {
+        VStack(spacing: 16) {
+            IconTile(symbol: icon, color: color, size: 56)
+            VStack(spacing: 6) {
+                Text(title).font(.title3.weight(.semibold))
+                Text(message)
+                    .font(.subheadline)
                     .foregroundStyle(Theme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
             }
         }
-        .padding(32)
+        .frame(maxWidth: .infinity)
+        .padding(26)
         .glassCard()
     }
-    
-    // MARK: - No Words View
-    
-    private var noWordsView: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                Circle()
-                    .fill(Theme.Colors.secondaryAccent.opacity(0.1))
-                    .frame(width: 100, height: 100)
-                
-                Image(systemName: "text.badge.plus")
-                    .font(.system(size: 40))
-                    .foregroundStyle(Theme.Colors.secondaryAccent)
-            }
-            
-            VStack(spacing: 8) {
-                Theme.Typography.title("Add Words First")
-                    .foregroundStyle(Theme.Colors.textPrimary)
-                
-                Theme.Typography.body("Add \(viewModel.activeLanguageName) vocabulary to generate a personalized story")
-                    .foregroundStyle(Theme.Colors.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .padding(32)
-        .glassCard()
-    }
-    
-    // MARK: - Today's Story Section
-    
-    private var todayStorySection: some View {
+
+    private var todaySection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Theme.Typography.title("Today's Story")
-                .font(.headline)
-                .foregroundColor(Theme.Colors.textSecondary)
-                .padding(.leading, 4)
-            
-            VStack(spacing: 20) {
+            SectionHeading(title: "Today’s reading")
+            Group {
                 if viewModel.isLoading {
                     loadingView
                 } else if viewModel.hasTodayStory {
@@ -128,233 +79,181 @@ struct StoryHomeView: View {
                     generateStoryCard
                 }
             }
-            .padding(24)
-            .glassCard()
+            .foregroundStyle(.white)
+            .padding(20)
+            .background(viewModel.hasTodayStory ? Theme.Colors.violetField : Theme.Colors.skyField)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.cardRadius, style: .continuous))
         }
     }
-    
+
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.5)
-                .tint(Theme.Colors.accent)
-            
-            Theme.Typography.body("Generating your story...")
-                .foregroundStyle(Theme.Colors.textSecondary)
-            
-            Theme.Typography.body("This may take a moment")
-                .font(.caption)
-                .foregroundStyle(Theme.Colors.textSecondary.opacity(0.7))
+        VStack(spacing: 18) {
+            StoryStackMark()
+            ProgressView().tint(.white)
+            VStack(spacing: 4) {
+                Text("Writing today’s story").font(.headline)
+                Text("Bringing your vocabulary into context…").font(.caption).foregroundStyle(.white.opacity(0.78))
+            }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
+        .padding(.vertical, 28)
     }
-    
+
     private var todayStoryCard: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 18) {
             if let story = viewModel.todayStory {
-                ZStack {
-                    Circle()
-                        .fill(Theme.Colors.success.opacity(0.1))
-                        .frame(width: 80, height: 80)
-                    
-                    Image(systemName: "book.pages.fill")
-                        .font(.system(size: 35))
-                        .foregroundStyle(Theme.Colors.success)
-                }
-                
-                VStack(spacing: 4) {
-                    Theme.Typography.title(story.title ?? "Today's Story")
-                        .foregroundStyle(Theme.Colors.textPrimary)
+                StoryStackMark(completed: story.quizCompleted)
+
+                VStack(spacing: 7) {
+                    Text(story.title ?? "Today’s Story")
+                        .font(.title2.weight(.semibold))
                         .multilineTextAlignment(.center)
-                    
-                    if story.quizCompleted {
-                        HStack(spacing: 4) {
-                            Image(systemName: "checkmark.circle.fill")
+                    HStack(spacing: 8) {
+                        Label(story.formattedDate, systemImage: "calendar")
+                        if story.quizCompleted {
+                            Label("\(story.quizScore)/\(story.quizQuestions.count)", systemImage: "checkmark.circle.fill")
                                 .foregroundStyle(Theme.Colors.success)
-                            Text("Quiz completed: \(story.quizScore)/\(story.quizQuestions.count)")
-                                .font(.caption)
-                                .foregroundStyle(Theme.Colors.textSecondary)
                         }
-                    } else {
-                        Text("Quiz not completed yet")
-                            .font(.caption)
-                            .foregroundStyle(Theme.Colors.secondaryAccent)
                     }
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.78))
                 }
-                
-                Button(action: {
-                    if storeManager.isStoryUnlocked {
-                        viewModel.selectStory(story)
-                    } else {
-                        showingPaywall = true
-                    }
-                }) {
-                    HStack {
-                        if !storeManager.isStoryUnlocked {
-                            Image(systemName: "lock.fill")
-                        } else {
-                            Image(systemName: "book.fill")
-                        }
-                        Text(storeManager.isStoryUnlocked ? "Read Story" : "Subscribe")
-                    }
-                    .frame(maxWidth: .infinity)
+
+                Button {
+                    if storeManager.isStoryUnlocked { viewModel.selectStory(story) }
+                    else { showingPaywall = true }
+                } label: {
+                    Label(storeManager.isStoryUnlocked ? "Open story" : "Unlock stories", systemImage: storeManager.isStoryUnlocked ? "book.fill" : "lock.fill")
                 }
-                .primaryButtonStyle()
+                .lightButtonStyle()
             }
         }
     }
-    
+
     private var generateStoryCard: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(Theme.Colors.accent.opacity(0.1))
-                    .frame(width: 80, height: 80)
-                
-                Image(systemName: "sparkles")
-                    .font(.system(size: 35))
-                    .foregroundStyle(Theme.Colors.accent)
-            }
-            
-            VStack(spacing: 4) {
-                Theme.Typography.title("Ready to Generate")
-                    .foregroundStyle(Theme.Colors.textPrimary)
-                
-                Theme.Typography.body("Create a story using your vocabulary words")
-                    .foregroundStyle(Theme.Colors.textSecondary)
+        VStack(spacing: 18) {
+            StoryStackMark()
+
+            VStack(spacing: 6) {
+                Text("A new story awaits")
+                    .font(.title2.weight(.semibold))
+                Text("We’ll use words from your collection so the reading feels familiar and useful.")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
             }
-            
-            Button(action: {
+
+            Button {
                 if storeManager.isStoryUnlocked {
-                    Task {
-                        await viewModel.loadOrGenerateStory()
-                    }
+                    Task { await viewModel.loadOrGenerateStory() }
                 } else {
                     showingPaywall = true
                 }
-            }) {
-                HStack {
-                    if !storeManager.isStoryUnlocked {
-                        Image(systemName: "lock.fill")
-                        Text("Subscribe")
-                    } else {
-                        Image(systemName: "wand.and.stars")
-                        Text("Generate Story")
-                    }
-                }
-                .frame(maxWidth: .infinity)
+            } label: {
+                Label(
+                    storeManager.isStoryUnlocked ? "Create today’s story" : "Unlock stories",
+                    systemImage: storeManager.isStoryUnlocked ? "square.and.pencil" : "lock.fill"
+                )
             }
-            .primaryButtonStyle()
+            .lightButtonStyle()
             .disabled(storeManager.isStoryUnlocked && viewModel.wordsForSelectedLanguage.count < 3)
-            .opacity(viewModel.wordsForSelectedLanguage.count < 3 ? 0.5 : 1.0)
-            
+
             if viewModel.wordsForSelectedLanguage.count < 3 {
-                Text("Need at least 3 words to generate a story")
+                Label("Save at least 3 words first", systemImage: "info.circle")
                     .font(.caption)
-                    .foregroundStyle(Theme.Colors.error)
+                    .foregroundStyle(.white.opacity(0.76))
             }
         }
     }
-    
-    // MARK: - Recent Stories Section
-    
+
     private var recentStoriesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Theme.Typography.title("Recent Stories")
-                    .font(.headline)
-                    .foregroundColor(Theme.Colors.textSecondary)
-                
-                Spacer()
-                
-                Button(action: {
-                    if storeManager.isStoryUnlocked {
-                        viewModel.navigateTo(.history)
-                    } else {
-                        showingPaywall = true
-                    }
-                }) {
-                    Text(storeManager.isStoryUnlocked ? "See All" : "Subscribe")
-                        .font(.caption)
-                        .foregroundStyle(Theme.Colors.accent)
-                }
+            SectionHeading(title: "Recent stories", actionTitle: storeManager.isStoryUnlocked ? "See all" : nil) {
+                viewModel.navigateTo(.history)
             }
-            .padding(.horizontal, 4)
-            
-            VStack(spacing: 12) {
-                ForEach(viewModel.storyHistory.prefix(3)) { story in
+
+            VStack(spacing: 0) {
+                ForEach(Array(viewModel.storyHistory.prefix(3).enumerated()), id: \.element.id) { index, story in
                     StoryHistoryRow(story: story) {
-                        if storeManager.isStoryUnlocked {
-                            viewModel.selectStory(story)
-                        } else {
-                            showingPaywall = true
-                        }
+                        if storeManager.isStoryUnlocked { viewModel.selectStory(story) }
+                        else { showingPaywall = true }
+                    }
+                    .padding(.horizontal, 17)
+                    .padding(.vertical, 12)
+                    if index < min(viewModel.storyHistory.count, 3) - 1 {
+                        Divider().padding(.leading, 17)
                     }
                 }
             }
-            .padding()
             .glassCard()
         }
     }
 }
 
-// MARK: - Story History Row
-
 struct StoryHistoryRow: View {
     let story: DailyStory
     let onTap: () -> Void
-    
+
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 13) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(story.title ?? "Untitled")
                         .font(.headline)
                         .foregroundStyle(Theme.Colors.textPrimary)
                         .lineLimit(1)
-                    
-                    HStack(spacing: 8) {
-                        Text(story.language ?? "")
-                            .font(.caption)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(Theme.Colors.secondaryAccent.opacity(0.1))
-                            .foregroundColor(Theme.Colors.secondaryAccent)
-                            .cornerRadius(8)
-                        
-                        Text(story.formattedDate)
-                            .font(.caption)
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                    }
-                }
-                
-                Spacer()
-                
-                if story.quizCompleted {
-                    VStack(spacing: 2) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Theme.Colors.success)
-                        Text("\(story.quizScore)/\(story.quizQuestions.count)")
-                            .font(.caption2)
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                    }
-                } else {
-                    Image(systemName: "chevron.right")
+                    Text("\(story.formattedDate) · \(story.language ?? "")")
+                        .font(.caption)
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
+                Spacer()
+                Image(systemName: "chevron.forward")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.Colors.textTertiary)
             }
-            .padding(.vertical, 4)
         }
-        .buttonStyle(.plain)
+        .tactileButtonStyle()
+    }
+}
+
+private struct StoryStackMark: View {
+    var completed = false
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(.white.opacity(0.18))
+                .frame(width: 62, height: 54)
+                .rotationEffect(.degrees(-7))
+                .offset(x: -8, y: 3)
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(.white.opacity(0.28))
+                .frame(width: 62, height: 54)
+                .rotationEffect(.degrees(6))
+                .offset(x: 8, y: 3)
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(.white)
+                .frame(width: 62, height: 54)
+            if completed {
+                Image(systemName: "checkmark")
+                    .font(.title3.weight(.heavy))
+                    .foregroundStyle(Theme.Colors.violetField)
+            } else {
+                VStack(spacing: 5) {
+                    Capsule().fill(Theme.Colors.skyField).frame(width: 30, height: 5)
+                    Capsule().fill(Theme.Colors.skyField.opacity(0.55)).frame(width: 22, height: 5)
+                }
+            }
+        }
+        .frame(width: 82, height: 68)
+        .accessibilityHidden(true)
     }
 }
 
 #Preview {
     StoryHomeView(viewModel: StoryViewModel(
-        wordRepository: WordRepository(dataManager: DataManager.shared),
-        storyRepository: StoryRepository(dataManager: DataManager.shared),
-        languageSpaceManager: LanguageSpaceManager.shared
+        wordRepository: WordRepository(dataManager: .shared),
+        storyRepository: StoryRepository(dataManager: .shared),
+        languageSpaceManager: .shared
     ))
 }

@@ -8,17 +8,21 @@ struct LanguageSpaceSwitcher: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                Image(systemName: "rectangle.stack.fill")
-                    .font(.caption)
+                Text(space.learningLanguageCode.uppercased())
+                    .font(.system(.caption2, design: .rounded).weight(.heavy))
+                    .padding(.horizontal, 6)
+                    .frame(minHeight: 22)
+                    .foregroundStyle(.white)
+                    .background(Theme.Colors.accentField, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                 Text(space.learningLanguageName)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.system(.subheadline, design: .rounded).weight(.bold))
                 Image(systemName: "chevron.down")
                     .font(.caption2.weight(.bold))
             }
             .foregroundStyle(Theme.Colors.accent)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Theme.Colors.accent.opacity(0.1))
+            .background(Theme.Colors.accentSurface)
             .clipShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -53,10 +57,10 @@ struct LanguageSpacesView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Theme.Typography.display("Language Spaces")
-                            .foregroundStyle(Theme.Colors.textPrimary)
-                        Text("Each space keeps its vocabulary, flashcards, and Daily Stories together.")
-                            .foregroundStyle(Theme.Colors.textSecondary)
+                        PageHeader(
+                            "Language spaces",
+                            subtitle: "Keep each language’s words, practice, and stories together."
+                        )
                     }
 
                     VStack(spacing: 10) {
@@ -92,7 +96,7 @@ struct LanguageSpacesView: View {
                     }
 
                     Button(action: addSpace) {
-                        Label("Add Language Space", systemImage: "plus.circle")
+                        Label("Add language space", systemImage: "plus")
                             .frame(maxWidth: .infinity)
                     }
                     .primaryButtonStyle()
@@ -106,7 +110,7 @@ struct LanguageSpacesView: View {
                 }
                 .padding()
             }
-            .background(Theme.Colors.background)
+            .background(AmbientBackground())
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Done") { dismiss() }
@@ -184,23 +188,20 @@ struct CreateLanguageSpaceView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.background.ignoresSafeArea()
+                AmbientBackground()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Theme.Typography.display(isInitialSetup ? "Choose a language" : "New Language Space")
-                                .foregroundStyle(Theme.Colors.textPrimary)
-                            Text(isInitialSetup
-                                 ? "Choose the language you want to learn. You can add another one with a Daily Stories subscription."
-                                 : "Words, reviews, and stories in this space will stay separate from your other languages.")
-                                .foregroundStyle(Theme.Colors.textSecondary)
-                        }
+                        PageHeader(
+                            isInitialSetup ? "Choose a language" : "New language space",
+                            subtitle: isInitialSetup
+                                ? "Pick what you want to learn and the language you want meanings in."
+                                : "Words, practice, and stories here stay separate from your other languages."
+                        )
 
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("I’m learning")
-                                .font(.caption)
-                                .foregroundStyle(Theme.Colors.textSecondary)
+                            Label("I’m learning", systemImage: "character.book.closed.fill")
+                                .font(.headline)
                             languageButton(title: learningLanguageName) {
                                 showingLearningLanguagePicker = true
                             }
@@ -209,9 +210,8 @@ struct CreateLanguageSpaceView: View {
                         .glassCard()
 
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("I want meanings in")
-                                .font(.caption)
-                                .foregroundStyle(Theme.Colors.textSecondary)
+                            Label("Show meanings in", systemImage: "text.bubble.fill")
+                                .font(.headline)
                             languageButton(title: meaningLanguageName) {
                                 showingMeaningLanguagePicker = true
                             }
@@ -225,7 +225,7 @@ struct CreateLanguageSpaceView: View {
                                 .foregroundStyle(Theme.Colors.error)
                         }
 
-                        Button(isInitialSetup ? "Start Learning" : "Create Space") {
+                        Button(isInitialSetup ? "Start learning" : "Create space") {
                             createSpace()
                         }
                         .primaryButtonStyle()
@@ -275,7 +275,7 @@ struct CreateLanguageSpaceView: View {
             }
             .padding()
             .background(Theme.Colors.inputBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
     }
 

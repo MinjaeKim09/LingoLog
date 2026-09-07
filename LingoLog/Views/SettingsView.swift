@@ -50,9 +50,12 @@ struct SettingsView: View {
     }
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
+        NavigationStack {
+            ZStack {
+                AmbientBackground()
+                ScrollView {
+                    VStack(spacing: 24) {
+                    PageHeader("More", subtitle: "Shape LingoLog around the way you learn.")
                     
                     // Profile Section
                     profileSection
@@ -69,7 +72,7 @@ struct SettingsView: View {
                         if let space = languageSpaceManager.activeSpace {
                             Button(action: { showingLanguageSpaces = true }) {
                                 HStack(spacing: 12) {
-                                    Image(systemName: "rectangle.stack.fill")
+                                    Image(systemName: "character.book.closed.fill")
                                         .foregroundStyle(Theme.Colors.accent)
                                     VStack(alignment: .leading, spacing: 3) {
                                         Theme.Typography.body(space.learningLanguageName)
@@ -183,18 +186,14 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.top, 8)
+                    }
+                    .padding(Theme.Metrics.pagePadding)
+                    .padding(.bottom, 28)
                 }
-                .padding()
+                .scrollIndicators(.hidden)
             }
-            .background(Color.clear)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Theme.Typography.title("Settings")
-                        .foregroundStyle(Theme.Colors.textPrimary)
-                }
-            }
             .alert("Reset All Data", isPresented: $showingResetAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Reset", role: .destructive) {

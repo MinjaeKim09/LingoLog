@@ -9,6 +9,7 @@ const { Environment, SignedDataVerifier } = require("@apple/app-store-server-lib
 const { requestClientKey, verifyAppAttestation } = require("./app-check");
 const { buildPrompt, clientError, serverError, stripMarkdownFence, validateStoryRequest, validateStoryResponse } = require("./story");
 const { fetchSupportedLanguages, translateWithGoogle, validateTranslationRequest } = require("./translation");
+const { getDailyStory } = require("./daily-story");
 
 admin.initializeApp();
 
@@ -34,19 +35,19 @@ exports.generateDailyStory = onRequest({ cors: false, secrets: [GEMINI_API_KEY, 
     res.status(405).json({ error: "Use POST to generate a story." });
     return;
   }
-  let quotaRef = null;
   try {
     await verifyAppAttestation(req, IOS_APP_ID.value());
     const payload = validateStoryRequest(req.body);
     const transaction = await verifySubscription(payload.subscriptionJWS);
-    quotaRef = await reserveDailyQuota(transaction.originalTransactionId);
-    const story = await generateStoryWithGemini(payload);
-    await quotaRef.update({ completedAt: FieldValue.serverTimestamp(), status: "completed" });
+    const story = await getDailyStory({
+      db: admin.firestore(),
+      originalTransactionId: transaction.originalTransactionId,
+      payload,
+      generateStory: generateStoryWithGemini,
+      serverTimestamp: () => FieldValue.serverTimestamp(),
+    });
     res.status(200).json(story);
   } catch (error) {
-    if (quotaRef && (!error.statusCode || error.statusCode >= 500)) {
-      await quotaRef.delete().catch((deleteError) => console.error("Failed to release story quota", deleteError));
-    }
     console.error("Daily story request failed", error);
     res.status(error.statusCode || 500).json({ error: error.statusCode && error.statusCode < 500 ? error.message : "Story generation failed. Please try again later." });
   }
@@ -111,16 +112,6 @@ async function verifySubscription(subscriptionJWS) {
     throw clientError("Daily Stories subscription is not active.");
   }
   return transaction;
-}
-
-async function reserveDailyQuota(originalTransactionId) {
-  const date = new Date().toISOString().slice(0, 10);
-  const ref = admin.firestore().collection("dailyStoryQuota").doc(`${originalTransactionId}_${date}`);
-  await admin.firestore().runTransaction(async (transaction) => {
-    if ((await transaction.get(ref)).exists) throw clientError("You have already generated today's story.");
-    transaction.set(ref, { originalTransactionId, date, createdAt: FieldValue.serverTimestamp(), status: "pending" });
-  });
-  return ref;
 }
 
 async function generateStoryWithGemini(payload) {

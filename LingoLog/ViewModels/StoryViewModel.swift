@@ -108,10 +108,12 @@ final class StoryViewModel: ObservableObject {
 
         languageSpaceManager.$activeSpaceID
             .dropFirst()
-            .sink { [weak self] _ in
+            .sink { [weak self] id in
                 guard let self else { return }
-                selectedLanguage = languageSpaceManager.activeSpace?.learningLanguageCode ?? ""
+                selectedLanguage = languageSpaceManager.spaces.first { $0.id == id }?.learningLanguageCode ?? ""
                 currentStory = nil
+                resetQuizState()
+                viewState = .home
                 error = nil
                 objectWillChange.send()
             }
@@ -177,6 +179,7 @@ final class StoryViewModel: ObservableObject {
     }
     
     func generateNewStory() async {
+        guard !isLoading else { return }
         guard !selectedLanguage.isEmpty else {
             error = "Please select a language first."
             return
@@ -190,6 +193,8 @@ final class StoryViewModel: ObservableObject {
         
         isLoading = true
         error = nil
+        let generationLanguage = selectedLanguage
+        defer { isLoading = false }
         
         do {
             // Select 5-8 random words for the story
@@ -197,33 +202,42 @@ final class StoryViewModel: ObservableObject {
             let selectedWords = Array(words.shuffled().prefix(wordCount))
             
             // Get language name for the prompt
-            let languageName = languageName(for: selectedLanguage)
+            let languageName = languageName(for: generationLanguage)
             
             // Generate story using Gemini
             let response = try await geminiService.generateStory(
                 words: selectedWords,
-                language: selectedLanguage,
+                language: generationLanguage,
                 languageName: languageName,
                 subscriptionJWS: storeManager.storySubscriptionJWS
             )
             
             // Save the story
-            let wordIDs = selectedWords.compactMap { $0.id }
+            let storyWords: [WordEntry]
+            if let generatedWords = response.words {
+                storyWords = words.filter { word in
+                    generatedWords.contains { $0.term == word.word && $0.meaning == word.translation }
+                }
+            } else {
+                storyWords = selectedWords
+            }
+            let wordIDs = storyWords.compactMap { $0.id }
             let story = storyRepository.saveStory(
                 title: response.title,
                 content: response.story,
-                language: selectedLanguage,
+                language: generationLanguage,
                 wordIDs: wordIDs,
                 quizQuestions: response.questions
             )
             
+            guard selectedLanguage == generationLanguage else { return }
             currentStory = story
-            isLoading = false
             navigateTo(.reading)
             
         } catch {
-            isLoading = false
-            self.error = error.localizedDescription
+            if selectedLanguage == generationLanguage {
+                self.error = error.localizedDescription
+            }
             AppLogger.story.error("Failed to generate story: \(error.localizedDescription, privacy: .public)")
         }
     }

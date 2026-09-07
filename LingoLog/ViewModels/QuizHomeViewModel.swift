@@ -18,27 +18,35 @@ final class QuizHomeViewModel: ObservableObject {
         refresh()
     }
     
-    func refresh() {
-        let dueWords = wordRepository.dueWords(
-            for: languageSpaceManager.activeSpace?.learningLanguageCode
+    func refresh(referenceDate: Date = Date()) {
+        update(
+            words: wordRepository.words,
+            spaceID: languageSpaceManager.activeSpaceID,
+            referenceDate: referenceDate
         )
-        wordsDue = dueWords
-        
-        let unmastered = wordRepository.words(
-            for: languageSpaceManager.activeSpace?.learningLanguageCode
-        ).filter { !$0.isMastered && $0.nextReviewDate != nil }
-        nextReviewDate = unmastered.compactMap { $0.nextReviewDate }.min()
-        updateTimer()
     }
-    
-    func updateTimer() {
+
+    func updateTimer(referenceDate: Date = Date()) {
+        // Due membership must advance with the clock as well as the label.
+        refresh(referenceDate: referenceDate)
+    }
+
+    private func update(words: [WordEntry], spaceID: UUID?, referenceDate: Date) {
+        let language = languageSpaceManager.spaces.first { $0.id == spaceID }?.learningLanguageCode
+        let unmastered = words.filter {
+            (language == nil || $0.language == language) && !$0.isMastered
+        }
+        wordsDue = unmastered.filter {
+            ($0.nextReviewDate ?? .distantPast) <= referenceDate
+        }.sorted { ($0.nextReviewDate ?? .distantPast) < ($1.nextReviewDate ?? .distantPast) }
+        nextReviewDate = unmastered.compactMap { $0.nextReviewDate }.min()
+
         guard let targetDate = nextReviewDate else {
             timeRemaining = ""
             return
         }
         
-        let now = Date()
-        let diff = targetDate.timeIntervalSince(now)
+        let diff = targetDate.timeIntervalSince(referenceDate)
         
         if diff <= 0 {
             timeRemaining = "Ready!"
@@ -52,14 +60,9 @@ final class QuizHomeViewModel: ObservableObject {
     
     private func bind() {
         wordRepository.$words
-            .sink { [weak self] _ in
-                self?.refresh()
-            }
-            .store(in: &cancellables)
-
-        languageSpaceManager.$activeSpaceID
-            .sink { [weak self] _ in
-                self?.refresh()
+            .combineLatest(languageSpaceManager.$activeSpaceID)
+            .sink { [weak self] words, spaceID in
+                self?.update(words: words, spaceID: spaceID, referenceDate: Date())
             }
             .store(in: &cancellables)
     }

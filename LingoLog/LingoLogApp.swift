@@ -35,17 +35,25 @@ struct LingoLogApp: App {
     init() {
         self.environment = AppEnvironment()
         let tabAppearance = UITabBarAppearance()
-        tabAppearance.configureWithOpaqueBackground()
-        tabAppearance.backgroundColor = .systemBackground
-        tabAppearance.shadowColor = UIColor.separator.withAlphaComponent(0.35)
+        tabAppearance.configureWithTransparentBackground()
+        tabAppearance.backgroundEffect = UIBlurEffect(style: .systemMaterial)
+        tabAppearance.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.72)
+        tabAppearance.shadowColor = UIColor.separator.withAlphaComponent(0.18)
         UITabBar.appearance().standardAppearance = tabAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabAppearance
+
+        let navigationAppearance = UINavigationBarAppearance()
+        navigationAppearance.configureWithTransparentBackground()
+        navigationAppearance.shadowColor = .clear
+        UINavigationBar.appearance().standardAppearance = navigationAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navigationAppearance
+        UINavigationBar.appearance().compactAppearance = navigationAppearance
     }
     
     var body: some Scene {
         WindowGroup {
             ZStack {
-                Theme.Colors.background.ignoresSafeArea()
+                AmbientBackground()
                 ContentView(
                     environment: environment
                 )

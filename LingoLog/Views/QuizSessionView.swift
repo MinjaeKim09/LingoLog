@@ -84,7 +84,7 @@ struct QuizSessionView: View {
                     .transition(.scale.combined(with: .opacity))
                 }
             }
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.showFeedbackOverlay)
+            .animation(Theme.Motion.standard, value: viewModel.showFeedbackOverlay)
         )
     }
 }
