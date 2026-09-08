@@ -27,6 +27,9 @@ Updated September 8, 2026. This is a preparation checkpoint, not a declaration t
 - The public support, privacy, and terms pages are live through GitHub Pages. Support email `kim.minjae@nyu.edu` was confirmed by the owner.
 - App Store Connect uses Education as the primary category and a 4+ age rating. The privacy label is published with user content, user/device identifiers, and purchase history linked to the user; operational diagnostics are not linked; no data is used for tracking.
 - The App Store Support URL and Privacy Policy URL are populated with the live GitHub Pages site.
+- The app itself is priced Free and is available in all 175 App Store countries and regions on release. The optional Daily Stories subscription remains US `$2.99/month` with Apple-converted storefront pricing.
+- The `Daily Stories` subscription group and `Daily Stories Monthly` subscription are both in the draft review submission and show Ready for Review.
+- A clean 13-inch iPad screenshot was captured at the required 2064×2752 resolution and saved as `app-store-screenshots/05-ipad-home.png`.
 
 ## Support site
 
@@ -34,7 +37,7 @@ The simple support, privacy, and terms pages are stored directly in `docs/` and 
 
 ## Requires owner / App Store completion
 
-- Final pricing is approved at US $2.99/month; the local StoreKit fixture matches.
+- Final subscription pricing is approved at US $2.99/month; the local StoreKit fixture matches.
 - Confirm paid development team and distribution signing in Xcode. Enable App Attest on the registered App ID if required.
 - Paid Apps Agreement accepted; its status is `Pending User Info`. The U.S. W-9 is now Active. Add a bank account and complete the EU Digital Services Act trader-status declaration personally.
 - The subscription review screenshot and four iPhone App Store screenshots are uploaded.
@@ -46,9 +49,9 @@ The simple support, privacy, and terms pages are stored directly in `docs/` and 
 
 - Verify successful translation/story requests, invalid attestation, real sandbox purchase, restore, expiry/cancellation, and quota recovery against the deployed backend.
 - Test physical iPhone and iPad, iPad landscape, VoiceOver, larger text, dark mode, notifications, export, reset, offline errors, and upgrade behavior.
-- Capture and upload the corresponding iPad screenshots if App Store Connect requires them for this universal build.
-- Complete Content Rights, countries, Mac/Apple Vision Pro availability, and any remaining accessibility declarations.
-- Complete TestFlight testing and include the first subscription in the same review submission.
+- Upload the prepared 13-inch iPad screenshot. App Store Connect requires it for this universal build.
+- Complete any remaining Mac/Apple Vision Pro availability and accessibility declarations.
+- Complete TestFlight testing and add app version 1.0 to the draft containing the subscription group and first subscription.
 - Choose manual release; submit for review only after the preceding gates pass.
 
 ## Known limits
