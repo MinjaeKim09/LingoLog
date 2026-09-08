@@ -1,6 +1,6 @@
 # LingoLog v1 release handoff
 
-Updated September 8, 2026. This is a preparation checkpoint, not a declaration that the app is ready to submit.
+Updated September 8, 2026. Version 1.0 and its two subscription items are submitted to Apple and waiting for review. Manual release is selected.
 
 ## Completed and verified
 
