@@ -28,7 +28,7 @@ Updated September 8, 2026. This is a preparation checkpoint, not a declaration t
 - App Store Connect uses Education as the primary category and a 4+ age rating. The privacy label is published with user content, user/device identifiers, and purchase history linked to the user; operational diagnostics are not linked; no data is used for tracking.
 - The App Store Support URL and Privacy Policy URL are populated with the live GitHub Pages site.
 - The app itself is priced Free and is available in all 175 App Store countries and regions on release. The optional Daily Stories subscription remains US `$2.99/month` with Apple-converted storefront pricing.
-- The draft review submission contains all three required items: iOS app version 1.0 build 2, the `Daily Stories` subscription group, and the `Daily Stories Monthly` subscription. App Store Connect shows `Items Ready to Submit (3)` and enables `Submit for Review`.
+- The three-item package was submitted to Apple on September 8, 2026 at 5:48 PM: iOS app version 1.0 build 2, the `Daily Stories` subscription group, and the `Daily Stories Monthly` subscription. Submission ID: `9333e820-85cf-46df-87f4-be5c225952a6`. All three items currently show `Waiting for Review`.
 - A clean 13-inch iPad screenshot was captured at the required 2064×2752 resolution, saved as `app-store-screenshots/05-ipad-home.png`, and uploaded to version 1.0.
 
 ## Support site
@@ -51,7 +51,7 @@ The simple support, privacy, and terms pages are stored directly in `docs/` and 
 - Test physical iPhone and iPad, iPad landscape, VoiceOver, larger text, dark mode, notifications, export, reset, offline errors, and upgrade behavior.
 - Complete any remaining Mac/Apple Vision Pro availability and accessibility declarations.
 - Complete any remaining desired TestFlight testing.
-- Submit the prepared three-item package for review after the owner gives final confirmation. Manual release is selected.
+- Monitor App Store Connect and the support email for App Review questions or a decision. Manual release is selected, so an approval will still require releasing version 1.0 from App Store Connect.
 
 ## Known limits
 
