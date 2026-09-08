@@ -32,6 +32,14 @@ struct Language: Identifiable, Codable, Hashable {
         self.dir = Self.isRightToLeft(code) ? "rtl" : "ltr"
     }
 
+    // Available immediately so first launch never depends on attestation or a network.
+    static let starterLanguages: [Language] = [
+        ("ar", "Arabic"), ("zh-CN", "Chinese (Simplified)"), ("zh-TW", "Chinese (Traditional)"),
+        ("en", "English"), ("fr", "French"), ("de", "German"), ("hi", "Hindi"),
+        ("it", "Italian"), ("ja", "Japanese"), ("ko", "Korean"), ("pt", "Portuguese"),
+        ("ru", "Russian"), ("es", "Spanish"), ("vi", "Vietnamese")
+    ].map { Language(code: $0.0, name: $0.1) }
+
     private static func nativeName(for code: String) -> String? {
         let locale = Locale(identifier: code.replacingOccurrences(of: "-", with: "_"))
         return locale.localizedString(forIdentifier: code)
@@ -86,6 +94,7 @@ final class TranslationService: VocabularyTranslating {
     }
 
     func translate(text: String, from sourceLang: String, to targetLang: String) async throws -> String {
+        try CloudConsent.require(CloudConsent.translationKey)
         guard let functionURL else {
             throw TranslationServiceError.missingProxyURL
         }
@@ -95,6 +104,7 @@ final class TranslationService: VocabularyTranslating {
             TranslationRequest(text: text, sourceLanguage: sourceLang, targetLanguage: targetLang)
         )
 
+        try CloudConsent.require(CloudConsent.translationKey)
         let (data, response) = try await URLSession.shared.data(for: request)
         try validate(response: response, data: data)
 

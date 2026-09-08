@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>PrivacyPolicyURL</key>
-	<string></string>
+	<string>https://minjaekim09.github.io/LingoLog/privacy.html</string>
 	<key>TermsOfServiceURL</key>
-	<string></string>
+	<string>https://www.apple.com/legal/internet-services/itunes/dev/stdeula/</string>
 	<key>DailyStoriesFunctionURL</key>
 	<string>https://us-central1-lingolog-eed1b.cloudfunctions.net/generateDailyStory</string>
 	<key>TranslationFunctionURL</key>

@@ -4,6 +4,7 @@ struct StoryHomeView: View {
     @ObservedObject var viewModel: StoryViewModel
     @ObservedObject var storeManager: StoreManager = .shared
     @State private var showingPaywall = false
+    @AppStorage(CloudConsent.storiesKey) private var allowsStories = false
 
     var body: some View {
         NavigationStack {
@@ -143,6 +144,16 @@ struct StoryHomeView: View {
                     .multilineTextAlignment(.center)
             }
 
+            if !allowsStories {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Stories with Google Gemini").font(.headline)
+                    Text("To create a story, selected words, their meanings, and the learning language are sent through Firebase to Google Gemini. LingoLog stores the result and vocabulary on its server with your purchase identifier to enforce the daily limit and recover retries. AI can make mistakes. You can turn sharing off in More.")
+                        .font(.subheadline)
+                    Button("Allow AI story sharing") { allowsStories = true }
+                        .lightButtonStyle()
+                }
+            }
+
             Button {
                 if storeManager.isStoryUnlocked {
                     Task { await viewModel.loadOrGenerateStory() }
@@ -156,7 +167,7 @@ struct StoryHomeView: View {
                 )
             }
             .lightButtonStyle()
-            .disabled(storeManager.isStoryUnlocked && viewModel.wordsForSelectedLanguage.count < 3)
+            .disabled(storeManager.isStoryUnlocked && (!allowsStories || viewModel.wordsForSelectedLanguage.count < 3))
 
             if viewModel.wordsForSelectedLanguage.count < 3 {
                 Label("Save at least 3 words first", systemImage: "info.circle")

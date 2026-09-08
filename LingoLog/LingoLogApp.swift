@@ -10,13 +10,19 @@ import UserNotifications
 import FirebaseAppCheck
 import FirebaseCore
 
+final class ReleaseAppCheckProviderFactory: NSObject, AppCheckProviderFactory {
+    func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
+        AppAttestProvider(app: app)
+    }
+}
+
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         #if DEBUG
         AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
         #else
-        AppCheck.setAppCheckProviderFactory(DeviceCheckProviderFactory())
+        AppCheck.setAppCheckProviderFactory(ReleaseAppCheckProviderFactory())
         #endif
         FirebaseApp.configure()
         return true

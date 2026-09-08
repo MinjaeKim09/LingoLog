@@ -8,6 +8,7 @@ struct AddWordView: View {
     let languageSpaceManager: LanguageSpaceManager
     @StateObject private var viewModel: AddWordViewModel
     @State private var showingContext = false
+    @AppStorage(CloudConsent.translationKey) private var allowsTranslation = false
     @FocusState private var focusedField: Field?
 
     private enum Field { case word, context }
@@ -41,7 +42,24 @@ struct AddWordView: View {
                             subtitle: "Type in either language. We’ll work out the other side."
                         )
 
-                        inputCard
+                        if allowsTranslation {
+                            inputCard
+                        } else {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Translate with Google").font(.headline)
+                                Text("As you type, your text and selected languages are sent through LingoLog’s Firebase service to Google Cloud Translation. Memory cues stay on your device. You can turn this off in More.")
+                                    .font(.subheadline)
+                                Button("Allow online translation") {
+                                    allowsTranslation = true
+                                    focusedField = .word
+                                }
+                                .primaryButtonStyle()
+                                Button("Not now") { dismiss() }
+                                    .buttonStyle(.bordered)
+                            }
+                            .padding(18)
+                            .glassCard()
+                        }
 
                         if viewModel.isTranslating && viewModel.translation == nil {
                             translatingCard
@@ -90,7 +108,7 @@ struct AddWordView: View {
                 .padding(.vertical, 12)
                 .background(.ultraThinMaterial)
             }
-            .onAppear { focusedField = .word }
+            .onAppear { if allowsTranslation { focusedField = .word } }
         }
     }
 

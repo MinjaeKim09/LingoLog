@@ -125,7 +125,7 @@ struct PaywallView: View {
                             .foregroundStyle(Theme.Colors.accent)
                         }
                     }
-                    
+
                     // Error
                     if let error = storeManager.purchaseError {
                         Text(error)
@@ -133,7 +133,7 @@ struct PaywallView: View {
                             .foregroundStyle(Theme.Colors.error)
                             .multilineTextAlignment(.center)
                     }
-                    
+
                     Spacer(minLength: 30)
                 }
                 .padding(.horizontal, 24)

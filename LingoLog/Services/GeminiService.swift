@@ -100,6 +100,7 @@ class GeminiService {
         languageName: String,
         subscriptionJWS: String?
     ) async throws -> StoryResponse {
+        try CloudConsent.require(CloudConsent.storiesKey)
         guard let proxyURL else {
             throw GeminiServiceError.missingProxyURL
         }
@@ -128,6 +129,7 @@ class GeminiService {
         request.setValue(appCheckToken.token, forHTTPHeaderField: "X-Firebase-AppCheck")
         request.httpBody = try JSONEncoder().encode(payload)
         
+        try CloudConsent.require(CloudConsent.storiesKey)
         let (data, response) = try await URLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {

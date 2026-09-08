@@ -8,6 +8,8 @@ struct SettingsView: View {
     let translationService: TranslationService
     @ObservedObject var languageSpaceManager: LanguageSpaceManager
     @StateObject private var viewModel: SettingsViewModel
+    @AppStorage(CloudConsent.translationKey) private var allowsTranslation = false
+    @AppStorage(CloudConsent.storiesKey) private var allowsStories = false
     @State private var showingResetAlert = false
     @State private var showingExportSheet = false
     @State private var showingNotificationSettingsAlert = false
@@ -160,6 +162,17 @@ struct SettingsView: View {
                         }
                     }
                     
+                    SettingsSection(title: "Online features") {
+                        Toggle("Google translation", isOn: $allowsTranslation)
+                        Text("Sends text you type and selected languages through Firebase to Google Cloud Translation.")
+                            .font(.caption)
+                        Toggle("Gemini AI stories", isOn: $allowsStories)
+                        Text("Sends selected words, meanings, and language through Firebase to Google Gemini. Story results and vocabulary are stored on the server with your purchase identifier for daily limits and retries. AI can make mistakes.")
+                            .font(.caption)
+                        Text("Turning sharing off stops future requests. It does not delete information already sent.")
+                            .font(.caption)
+                    }
+
                     // About Section
                     SettingsSection(title: "About") {
                         HStack {
@@ -357,6 +370,8 @@ struct SettingsView: View {
         languageSpaceManager.resetSpaces()
         StudyHistoryManager.shared.reset()
         userManager.resetProfile()
+        allowsTranslation = false
+        allowsStories = false
         NotificationManager.shared.updateNotificationsAndBadge(
             dueCount: 0,
             hour: dataManager.notificationHour,

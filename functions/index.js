@@ -5,11 +5,12 @@ const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
 const { onRequest } = require("firebase-functions/v2/https");
 const { defineSecret, defineString } = require("firebase-functions/params");
-const { Environment, SignedDataVerifier } = require("@apple/app-store-server-library");
+const { SignedDataVerifier } = require("@apple/app-store-server-library");
 const { requestClientKey, verifyAppAttestation } = require("./app-check");
 const { buildPrompt, clientError, serverError, stripMarkdownFence, validateStoryRequest, validateStoryResponse } = require("./story");
 const { fetchSupportedLanguages, translateWithGoogle, validateTranslationRequest } = require("./translation");
 const { getDailyStory } = require("./daily-story");
+const { verifySubscriptionTransaction, PRODUCT_ID } = require("./subscription");
 
 admin.initializeApp();
 
@@ -22,7 +23,7 @@ const APPLE_APP_ID = defineString("APPLE_APP_ID", { default: "" });
 const APP_STORE_ENVIRONMENT = defineString("APP_STORE_ENVIRONMENT", { default: "Sandbox" });
 const DEV_SKIP_APPLE_VERIFICATION = defineString("DEV_SKIP_APPLE_VERIFICATION", { default: "false" });
 
-const DAILY_STORIES_PRODUCT_ID = "com.lingolog.dailystories.monthly";
+const DAILY_STORIES_PRODUCT_ID = PRODUCT_ID;
 const GEMINI_MODEL_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
 const TRANSLATION_RATE_LIMIT = 60;
 const TRANSLATION_RATE_WINDOW_MS = 60 * 1000;
@@ -103,15 +104,16 @@ async function supportedGoogleLanguages() {
 }
 
 async function verifySubscription(subscriptionJWS) {
-  if (DEV_SKIP_APPLE_VERIFICATION.value() === "true") return { originalTransactionId: `dev-${createHash("sha256").update(subscriptionJWS).digest("hex")}`, productId: DAILY_STORIES_PRODUCT_ID };
-  const environment = APP_STORE_ENVIRONMENT.value() === "Production" ? Environment.PRODUCTION : Environment.SANDBOX;
+  if (DEV_SKIP_APPLE_VERIFICATION.value() === "true") {
+    if (process.env.FUNCTIONS_EMULATOR !== "true") throw new Error("Apple verification bypass is restricted to local emulators.");
+    return { originalTransactionId: `dev-${createHash("sha256").update(subscriptionJWS).digest("hex")}`, productId: DAILY_STORIES_PRODUCT_ID };
+  }
   const appAppleId = APPLE_APP_ID.value() ? Number(APPLE_APP_ID.value()) : undefined;
   const rootCert = Buffer.from(APPLE_ROOT_CERT_BASE64.value(), "base64");
-  const transaction = await new SignedDataVerifier([rootCert], true, environment, BUNDLE_ID.value(), appAppleId).verifyAndDecodeTransaction(subscriptionJWS);
-  if (transaction.productId !== DAILY_STORIES_PRODUCT_ID || transaction.revocationDate || !transaction.expiresDate || Number(transaction.expiresDate) <= Date.now() || !transaction.originalTransactionId) {
-    throw clientError("Daily Stories subscription is not active.");
-  }
-  return transaction;
+  return verifySubscriptionTransaction(subscriptionJWS, {
+    environment: APP_STORE_ENVIRONMENT.value(),
+    makeVerifier: (environment) => new SignedDataVerifier([rootCert], true, environment, BUNDLE_ID.value(), appAppleId),
+  });
 }
 
 async function generateStoryWithGemini(payload) {

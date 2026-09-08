@@ -66,7 +66,7 @@ Implementing a performant "Next Review Date" calculation directly within Core Da
 ## Getting Started
 
 ### Prerequisites
-- **Xcode 15+** (with iOS 17+ SDK)
+- **Xcode 26+** (with iOS 26+ SDK for App Store submission; deployment target remains iOS 17+)
 - A Firebase project with Cloud Functions and App Check configured
 - Google Cloud Translation API enabled, with an API key stored as a Firebase Functions secret
 

@@ -159,7 +159,7 @@ struct CreateLanguageSpaceView: View {
 
     @State private var learningLanguage = ""
     @State private var meaningLanguage: String
-    @State private var languages: [Language] = []
+    @State private var languages: [Language] = Language.starterLanguages
     @State private var showingLearningLanguagePicker = false
     @State private var showingMeaningLanguagePicker = false
     @State private var errorMessage: String?
@@ -258,7 +258,11 @@ struct CreateLanguageSpaceView: View {
             )
         }
         .task {
-            languages = (try? await translationService.fetchLanguages()) ?? []
+            do {
+                languages = try await translationService.fetchLanguages()
+            } catch {
+                errorMessage = "Showing common languages while the full list is unavailable. Translation needs an internet connection."
+            }
         }
     }
 
