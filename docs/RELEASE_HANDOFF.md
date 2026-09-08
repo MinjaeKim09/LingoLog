@@ -21,7 +21,7 @@ Updated September 8, 2026. This is a preparation checkpoint, not a declaration t
 - A signed device Release archive succeeds at `/tmp/LingoLog-signed.xcarchive`. App Store export succeeds at `/tmp/LingoLog-AppStore/LingoLog.ipa`; signature inspection confirms Apple Distribution team `5699GDC3LT`, bundle `mkim.LingoLog`, and production App Attest entitlement.
 - App Store validation initially found a missing 152×152 iPad icon and invalid bundle package type. Both packaging issues were corrected, all icon assets were converted to real PNG files, and the corrected `/tmp/LingoLog-signed-v2.xcarchive` passed every App Store validation check.
 - LingoLog 1.0 build 1 was uploaded successfully to App Store Connect. Its export-compliance declaration is complete and it is Ready to Submit.
-- Build 2 includes `ITSAppUsesNonExemptEncryption=false` and the production privacy-policy link. Its signed archive succeeded at `/tmp/LingoLog-build2.xcarchive`, and it was uploaded successfully to App Store Connect on September 8, 2026.
+- Build 2 includes `ITSAppUsesNonExemptEncryption=false` and the production privacy-policy link. Its signed archive succeeded at `/tmp/LingoLog-build2.xcarchive`, it was uploaded successfully, reached Ready to Submit, and is selected and saved on App Store version 1.0.
 - App Store copy and screenshot shot list are in `APP_STORE_METADATA.md`.
 - Four final iPhone screenshots with fictional Korean vocabulary are in `app-store-screenshots/upload-6.5` at App Store-ready 1284×2778 resolution, including the `$2.99/month` paywall. Native 1320×2868 captures are retained in the parent folder.
 - The public support, privacy, and terms pages are live through GitHub Pages. Support email `kim.minjae@nyu.edu` was confirmed by the owner.
@@ -48,7 +48,7 @@ The simple support, privacy, and terms pages are stored directly in `docs/` and 
 - Test physical iPhone and iPad, iPad landscape, VoiceOver, larger text, dark mode, notifications, export, reset, offline errors, and upgrade behavior.
 - Capture and upload the corresponding iPad screenshots if App Store Connect requires them for this universal build.
 - Complete Content Rights, countries, Mac/Apple Vision Pro availability, and any remaining accessibility declarations.
-- Wait for build 2 processing, select it on version 1.0, complete TestFlight testing, and include the first subscription in the same review submission.
+- Complete TestFlight testing and include the first subscription in the same review submission.
 - Choose manual release; submit for review only after the preceding gates pass.
 
 ## Known limits
