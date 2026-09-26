@@ -24,7 +24,7 @@ const APP_STORE_ENVIRONMENT = defineString("APP_STORE_ENVIRONMENT", { default: "
 const DEV_SKIP_APPLE_VERIFICATION = defineString("DEV_SKIP_APPLE_VERIFICATION", { default: "false" });
 
 const DAILY_STORIES_PRODUCT_ID = PRODUCT_ID;
-const GEMINI_MODEL_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
+const GEMINI_MODEL_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
 const TRANSLATION_RATE_LIMIT = 60;
 const TRANSLATION_RATE_WINDOW_MS = 60 * 1000;
 const LANGUAGE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -117,10 +117,53 @@ async function verifySubscription(subscriptionJWS) {
 }
 
 async function generateStoryWithGemini(payload) {
-  const response = await fetch(`${GEMINI_MODEL_URL}?key=${GEMINI_API_KEY.value()}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: buildPrompt(payload) }] }], generationConfig: { temperature: 0.8, topK: 40, topP: 0.95, maxOutputTokens: 2048, responseMimeType: "application/json" } }) });
+  const response = await fetch(`${GEMINI_MODEL_URL}?key=${GEMINI_API_KEY.value()}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: buildPrompt(payload) }] }],
+      generationConfig: {
+        temperature: 0.8,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 2048,
+        responseMimeType: "application/json",
+        responseJsonSchema: {
+          type: "object",
+          required: ["title", "story", "questions"],
+          properties: {
+            title: { type: "string" },
+            story: { type: "string" },
+            questions: {
+              type: "array",
+              minItems: 4,
+              maxItems: 4,
+              items: {
+                type: "object",
+                required: ["question", "options", "correctIndex"],
+                properties: {
+                  question: { type: "string" },
+                  options: {
+                    type: "array",
+                    minItems: 4,
+                    maxItems: 4,
+                    items: { type: "string" },
+                  },
+                  correctIndex: { type: "integer", minimum: 0, maximum: 3 },
+                },
+              },
+            },
+          },
+        },
+        thinkingConfig: { thinkingLevel: "low" },
+      },
+    }),
+  });
   const data = await response.json().catch(() => null);
   if (!response.ok) throw serverError(data && data.error && data.error.message ? data.error.message : "Gemini failed.");
-  const text = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+  const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+  const textPart = Array.isArray(parts) && parts.find((part) => part && typeof part.text === "string" && !part.thought);
+  const text = textPart && textPart.text;
   if (!text) throw serverError("Gemini returned an invalid response.");
   try {
     return validateStoryResponse(JSON.parse(stripMarkdownFence(text)));

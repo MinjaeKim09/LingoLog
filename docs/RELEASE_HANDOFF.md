@@ -1,6 +1,6 @@
 # LingoLog v1 release handoff
 
-Updated September 8, 2026. Version 1.0 and its two subscription items are submitted to Apple and waiting for review. Manual release is selected.
+Updated September 10, 2026. Version 1.0 build 2 was rejected under Guideline 2.1 — Information Needed. The subscription group and product remain Ready for Review. Manual release is selected. The canonical response is prepared in `APP_REVIEW_RESPONSE.md`, but it has not been sent and the submission is unchanged.
 
 ## Completed and verified
 
@@ -17,7 +17,7 @@ Updated September 8, 2026. Version 1.0 and its two subscription items are submit
 - The local deployment environment has `DEV_SKIP_APPLE_VERIFICATION=false`, `APP_STORE_ENVIRONMENT=Sandbox`, and Apple app ID `6809499793`. This file is intentionally ignored by Git.
 - Downloaded Apple Root CA G3 from Apple's certificate-authority website and verified its subject, dates, and acceptance by Apple's server library. Stored Firebase secret version 2.
 - Deployed the tested `translation` and `generateDailyStory` functions successfully on September 7, 2026.
-- Backend: 20 tests and lint pass. iOS: 18 unit/regression/consent tests pass on iPhone 17 Pro Max, iOS 26.5.
+- Backend: 20 tests and lint pass. On September 10, iOS: 18 unit/regression/consent tests passed with `xcodebuild test` on iPhone 17 Pro Max, iOS 26.5 simulator. This does not replace physical-device QA.
 - A signed device Release archive succeeds at `/tmp/LingoLog-signed.xcarchive`. App Store export succeeds at `/tmp/LingoLog-AppStore/LingoLog.ipa`; signature inspection confirms Apple Distribution team `5699GDC3LT`, bundle `mkim.LingoLog`, and production App Attest entitlement.
 - App Store validation initially found a missing 152×152 iPad icon and invalid bundle package type. Both packaging issues were corrected, all icon assets were converted to real PNG files, and the corrected `/tmp/LingoLog-signed-v2.xcarchive` passed every App Store validation check.
 - LingoLog 1.0 build 1 was uploaded successfully to App Store Connect. Its export-compliance declaration is complete and it is Ready to Submit.
@@ -28,8 +28,10 @@ Updated September 8, 2026. Version 1.0 and its two subscription items are submit
 - App Store Connect uses Education as the primary category and a 4+ age rating. The privacy label is published with user content, user/device identifiers, and purchase history linked to the user; operational diagnostics are not linked; no data is used for tracking.
 - The App Store Support URL and Privacy Policy URL are populated with the live GitHub Pages site.
 - The app itself is priced Free and is available in all 175 App Store countries and regions on release. The optional Daily Stories subscription remains US `$2.99/month` with Apple-converted storefront pricing.
-- The three-item package was submitted to Apple on September 8, 2026 at 5:48 PM: iOS app version 1.0 build 2, the `Daily Stories` subscription group, and the `Daily Stories Monthly` subscription. Submission ID: `9333e820-85cf-46df-87f4-be5c225952a6`. All three items currently show `Waiting for Review`.
+- The three-item package was submitted to Apple on September 8, 2026 at 5:48 PM: iOS app version 1.0 build 2, the `Daily Stories` subscription group, and the `Daily Stories Monthly` subscription. Submission ID: `9333e820-85cf-46df-87f4-be5c225952a6`. The current App Store Connect review page shows the app version as `Rejected` with `2.1.0 Performance: App Completeness`; the subscription group and product show `Ready for Review`.
 - A clean 13-inch iPad screenshot was captured at the required 2064×2752 resolution, saved as `app-store-screenshots/05-ipad-home.png`, and uploaded to version 1.0.
+- The current working tree contains an uncommitted Gemini model/schema change in `functions/index.js`; automated helper tests pass, but this change is not evidence that the deployed backend revision has changed.
+- Partial physical smoke QA completed September 10, 2026 on iPhone 13 Pro Max running iOS 27.0: LingoLog launched; More showed an active Daily Stories entitlement; Apple sandbox subscription management opened and showed `$2.99 per month`; Privacy and Terms opened; a fictional `hello` entry translated successfully through live Google Cloud Translation and was not saved; an existing story opened; and its comprehension quiz completed `4 of 4 correct`. Restore Purchases reached the Apple Account password prompt and was canceled without credentials, so restore remains unverified.
 
 ## Support site
 
@@ -53,6 +55,23 @@ The simple support, privacy, and terms pages are stored directly in `docs/` and 
 - Complete any remaining desired TestFlight testing.
 - Monitor App Store Connect and the support email for App Review questions or a decision. Manual release is selected, so an approval will still require releasing version 1.0 from App Store Connect.
 
+## App Review response status
+
+**App Review response prepared; not sent. Submission unchanged.**
+
+The seven requested answers and the recording script are in [`APP_REVIEW_RESPONSE.md`](APP_REVIEW_RESPONSE.md). Before sending the same finalized text in both App Review Reply and App Review Information → Notes, the account holder must add the playable physical-iPhone recording and actual device/build/date details, verify the live purchase and App Attest path, test a physical iPad, confirm asset provenance, and recheck Paid Apps Agreement, banking, and EU trader-status requirements.
+
+Remaining work is evidence-gated, not a demonstrated reason to replace build 2. Partial physical smoke QA is recorded above, but it is not the requested continuous recording of the complete TestFlight build 2 flow:
+
+| Action | Owner | Evidence / completion criterion |
+| --- | --- | --- |
+| Record normal flow on physical iPhone using TestFlight build 2 | Account holder / tester | Playable recording with actual device, public OS, build, date, paywall/legal links, purchase, story, quiz, restore, and management |
+| Verify paid functionality and production App Attest | Account holder / backend maintainer | Successful sandbox purchase → unlock → story → quiz → restore/manage, plus deployed `Production` environment verification |
+| Test supported physical iPad | Account holder / tester | Actual portrait and landscape results, including accessibility and offline/error checks |
+| Finish business setup | Account holder | Current Paid Apps Agreement, bank, and EU trader-status records |
+| Confirm asset provenance | Account holder | Ownership/license confirmation for every bundled asset before claiming no authorization documents apply |
+| Finalize seven answers | Maintainer, then account holder | Identical finalized `APP_REVIEW_RESPONSE.md` text pasted to Reply and Notes |
+
 ## Known limits
 
-The backend still has no automatic expiry for story/quota records; the drafted policy discloses this instead of promising a retention limit that does not exist. Data-reset in the app is local only. Existing Swift concurrency warnings remain warnings under the project's current Swift language mode. Device signing, live purchases, and production App Attest remain unverified.
+The backend still has no automatic expiry for story/quota records; the drafted policy discloses this instead of promising a retention limit that does not exist. Data-reset in the app is local only. Existing Swift concurrency warnings remain warnings under the project's current Swift language mode. The signed archive and production App Attest entitlement were verified previously, but physical-device runtime, live purchases, and production App Attest behavior remain unverified.

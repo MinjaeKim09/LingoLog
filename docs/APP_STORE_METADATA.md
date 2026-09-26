@@ -9,7 +9,7 @@ Prepared September 7, 2026. Save these fields after membership activation.
 | Primary language | English (U.S.) |
 | Bundle ID | mkim.LingoLog |
 | SKU | lingolog-ios |
-| Version / build | 1.0 / 1 (increment build for subsequent uploads) |
+| Version / build | 1.0 / 2 (submitted build; rejected under Guideline 2.1 for additional information) |
 | Suggested primary category | Education |
 | Suggested secondary category | Reference |
 | Base app price | Free |
@@ -39,13 +39,15 @@ Daily Stories is an auto-renewing monthly subscription. The price is shown befor
 
 Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
 
-[Add the published Privacy Policy URL before submission.]
+Privacy Policy: https://minjaekim09.github.io/LingoLog/privacy.html
 
 ## Keywords
 
 vocabulary,language,spaced repetition,translation,study,words,reading,quiz,immersion
 
 ## Review notes
+
+The current canonical Guideline 2.1 response, including the recording script and all seven requested answers, is in `APP_REVIEW_RESPONSE.md`. Paste the same finalized text into both App Review Reply and App Review Information → Notes after the physical-device evidence is complete.
 
 LingoLog uses a local profile and does not require account creation or a demo login.
 
